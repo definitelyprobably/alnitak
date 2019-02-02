@@ -1,0 +1,3 @@
+include requirements.txt
+include sample-dns-manager
+include alnitak.conf
