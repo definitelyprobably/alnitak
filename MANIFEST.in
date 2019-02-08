@@ -1,7 +1,7 @@
 include AUTHORS
-include CHANGELOG.md
+include CHANGELOG.rst
 include LICENCE
-include README.md
+include README.rst
 include alnitak.conf
 include requirements.txt
 include sample-api.sh
