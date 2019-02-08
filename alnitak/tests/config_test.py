@@ -11,7 +11,8 @@ def test_config_default():
     prog = setup.create_state_obj(s)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
@@ -40,7 +41,8 @@ def test_config1():
     prog = setup.create_state_obj(s, config=s.config1)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
@@ -73,7 +75,8 @@ def test_config2():
     prog = setup.create_state_obj(s, config=s.config2)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
@@ -96,14 +99,15 @@ def test_config6():
     prog = setup.create_state_obj(s, config=s.config6)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
     api0 = setup.create_api_binary_obj(str(s.bin / 'dns'))
-    api1 = setup.create_api_binary_obj('bin', '--flag1', 'input',
-                                       "input with\t whitespace")
+    api1 = setup.create_api_binary_obj(['bin', '--flag1', 'input',
+                                        "input with\t whitespace"])
     api2 = setup.create_api_c4_obj(zone='ZONE', email='me@domain.com',
                                    key='KEY')
 
@@ -137,7 +141,8 @@ def test_fail_configX1():
     prog = setup.create_state_obj(s, config=s.configX1)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -152,7 +157,8 @@ def test_fail_configX2():
     prog = setup.create_state_obj(s, config=s.configX2)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -170,7 +176,8 @@ def test_fail_configX3():
     prog = setup.create_state_obj(s, config=s.configX3)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -185,7 +192,8 @@ def test_fail_configX4():
     prog = setup.create_state_obj(s, config=s.configX4)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -200,7 +208,8 @@ def test_fail_configX5():
     prog = setup.create_state_obj(s, config=s.configX5)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -215,7 +224,8 @@ def test_fail_configX6():
     prog = setup.create_state_obj(s, config=s.configX6)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -233,7 +243,8 @@ def test_fail_configX7():
     prog = setup.create_state_obj(s, config=s.configX7)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -251,7 +262,8 @@ def test_fail_configX8():
     prog = setup.create_state_obj(s, config=s.configX8)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -269,7 +281,8 @@ def test_fail_configX9():
     prog = setup.create_state_obj(s, config=s.configX9)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -287,7 +300,8 @@ def test_fail_configX10():
     prog = setup.create_state_obj(s, config=s.configX10)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -305,7 +319,8 @@ def test_fail_configX11():
     prog = setup.create_state_obj(s, config=s.configX11)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -323,7 +338,8 @@ def test_fail_configX12():
     prog = setup.create_state_obj(s, config=s.configX12)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -341,7 +357,8 @@ def test_fail_configX13():
     prog = setup.create_state_obj(s, config=s.configX13)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -359,7 +376,8 @@ def test_fail_configX14():
     prog = setup.create_state_obj(s, config=s.configX14)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -377,7 +395,8 @@ def test_fail_configX15():
     prog = setup.create_state_obj(s, config=s.configX15)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -396,7 +415,8 @@ def test_fail_configX16():
     prog = setup.create_state_obj(s, config=s.configX16)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -414,7 +434,8 @@ def test_fail_configX17():
     prog = setup.create_state_obj(s, config=s.configX17)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -433,7 +454,8 @@ def test_fail_configX18():
     prog = setup.create_state_obj(s, config=s.configX18)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -452,7 +474,8 @@ def test_fail_configX19():
     prog = setup.create_state_obj(s, config=s.configX19)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -470,7 +493,8 @@ def test_fail_configX20():
     prog = setup.create_state_obj(s, config=s.configX20)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -488,7 +512,8 @@ def test_fail_configX21():
     prog = setup.create_state_obj(s, config=s.configX21)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
@@ -506,7 +531,8 @@ def test_fail_configX22():
     prog = setup.create_state_obj(s, config=s.configX22)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure

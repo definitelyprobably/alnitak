@@ -12,12 +12,24 @@ from alnitak import exceptions as Except
 # If going to change that, then remove the import above.
 
 def get_live(tlsa, pre):
-    """
-    Calls:
-        - None
+    """Return a live certificate name from one of the prehook lines.
 
-    Exceptions:
-        - Except.InternalError
+    Return a name (pathlib.Path) of a live certificate from one of the
+    prehook lines, the appropriate certificate depending on the DANE
+    record requested.
+
+    Args:
+        tlsa (Tlsa): not changed.
+        pre (DataPre): not changed.
+
+    Returns:
+        pathlib.Path: taken from 'pre'. If no certificate is found an
+            exception is raised.
+
+    Raises:
+        InternalError: there ought to be a prehook line for every pem cert
+            in the domain folder, so there ought to be a certificate for
+            whatever DANE record is requested.
     """
     if tlsa.usage == '2':
         name_list = [ "chain.pem", "fullchain.pem" ]
@@ -30,13 +42,26 @@ def get_live(tlsa, pre):
 
     raise Except.InternalError("suitable cert could not be found")
 
-def get_archive(tlsa, pre):
-    """
-    Calls:
-        - None
 
-    Exceptions:
-        - Except.InternalError
+def get_archive(tlsa, pre):
+    """Return an archive certificate name from one of the prehook lines.
+
+    Return a name (pathlib.Path) of an archive certificate from one of
+    the prehook lines, the appropriate certificate depending on the DANE
+    record requested.
+
+    Args:
+        tlsa (Tlsa): not changed.
+        pre (DataPre): not changed.
+
+    Returns:
+        pathlib.Path: taken from 'pre'. If no certificate is found an
+            exception is raised.
+
+    Raises:
+        InternalError: there ought to be a prehook line for every pem cert
+            in the domain folder, so there ought to be a certificate for
+            whatever DANE record is requested.
     """
     if tlsa.usage == '2':
         name_regex = r"(full)?chain[0-9]+\.pem"
@@ -49,13 +74,25 @@ def get_archive(tlsa, pre):
 
     raise Except.InternalError("suitable cert could not be found")
 
-def read_cert(cert):
-    """
-    Calls:
-        - None
+def read_cert(cert, tlsa):
+    """Return the PEM-encoded content of a certificate file.
 
-    Exceptions:
-        - Except.DNSProcessingError
+    Open a certificate file and return a str that is the PEM-encoded
+    public key info in that file, in the case of a fullchain file, only
+    the necessary key is returned, depending on the DANe record requested.
+
+    Args:
+        cert (pathlib.Path): PEM-encoded file to read.
+
+    Returns:
+        str: PEM-encoded content of 'cert' (with BEGIN and END headers and
+            footers). If 'cert' is a fullchain file, the relevent
+            certificate PEM is extracted.
+
+    Raises:
+        DNSProcessingError: if 'cert' could not be opened or no appropriate
+            PEM section in a fullchain file could be found. Also returned
+            if there is no content of the 'cert' file.
     """
     try:
         with open(str(cert), "r") as file:
@@ -93,15 +130,29 @@ def read_cert(cert):
                                                                         cert))
             cert_data = pems[0]
 
+    if len(cert_data) == 0:
+        raise Except.DNSProcessingError(
+                "creating hash: '{}' file: no data found".format(cert))
+
     return cert_data
 
 def get_hash(selector, matching, data):
-    """
-    Calls:
-        - None
+    """Create a DANE record 'certificate data' (hash) string.
 
-    Exceptions:
-        - Except.DNSProcessingError
+    Given a certificate PEM-encoded public key, generate 'certificate data'
+    (which we otherwise call a 'hash') for the DANE record.
+
+    Args:
+        selector (str): TLSA selector field (0|1).
+        matching (str): TLSA matching-type field (0|1|2).
+        data (str): PEM-encoded public key data.
+
+    Returns:
+        str: the 'certificate data' (hash).
+
+    Raises:
+        InternalError: if generating the 'certificate data' fails for any
+            reason.
     """
     cert = x509.load_pem_x509_certificate(
                                     bytes(data, 'utf-8'), default_backend())

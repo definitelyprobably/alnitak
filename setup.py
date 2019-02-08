@@ -11,20 +11,30 @@ setup(
     version=alnitak.__version__,
     packages=find_packages(),
 
-    install_requires=[
-        'requests',
-        'cryptography'
+    setup_requires=[
+        'pytest-runner',
+        'requests>=2.21.0',
+        'cryptography>=2.4.2',
     ],
+
+    install_requires=[
+        'requests>=2.21.0',
+        'cryptography>=2.4.2',
+    ],
+
+    tests_require=[ 'pytest' ],
 
 
     entry_points={ 'console_scripts': [ 'alnitak = alnitak.main:main' ], },
 
-    author='Karta Kooner',
+    author='K. S. Kooner',
     author_email='ksa.kooner@gmail.com',
+    license='MIT',
     url='git remote add origin https://github.com/definitelyprobably/alnitak.git',
     description='Create and manage DANE (DNS TLSA) records',
     long_description=long_description,
     keywords="dane tlsa",
+    platforms="Linux, POSIX",
     classifiers=[
             "Development Status :: 4 - Beta",
             "Environment :: Console",

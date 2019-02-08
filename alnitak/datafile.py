@@ -6,9 +6,17 @@ from alnitak import prog as Prog
 
 
 def read(prog):
-    """
-    Calls:
-        - NONE
+    """Read a datafile and set data in the internal program state.
+
+    Args:
+        prog (State): data is set based on the contents of the datafile.
+            No datafile is not taken as an error: simply nothing is done.
+
+    Returns:
+        RetVal: returns 'RetVal.ok' if no errors encountered,
+            'RetVal.exit_ok' if no datafile found, 'RetVal.exit_failure'
+            if errors found in the datafile or opening/reading the datafile
+            failed.
     """
     prog.log.info1("+++ reading datafile '{}'".format(prog.datafile))
     retval = Prog.RetVal.ok
@@ -104,9 +112,14 @@ def read(prog):
 
 
 def check_data(prog):
-    """
-    Calls:
-        - NONE
+    """Validate the data (from the datafile) in the internal program state.
+
+    Args:
+        prog (State): contains the data to check.
+
+    Returns:
+        RetVal: return 'RetVal.exit_failure' if errors found,
+            'RetVal.ok' if everything is ok.
     """
     prog.log.info3("+++ checking datafile data")
     retval = Prog.RetVal.ok
@@ -152,12 +165,43 @@ def check_data(prog):
 
 
 def write_prehook(prog):
-    """
-    Calls:
-        - NONE
+    """Write to datafile based on prehook mode operation ('prehook lines').
+
+    In prehook mode, the datafile needs to write lines (called
+    'prehook lines') that tell subsequent calls of the program what
+    certificate live/archive files are, and where. This function will also
+    set the permissions of the datafile properly: permissions are changed
+    before any meaningful data is written.
+
+    Args:
+        prog (State): contains the data to write.
+
+    Returns:
+        RetVal: returns 'RetVal.exit_failure' if any errors encountered,
+            'RetVal.ok' for success.
     """
     prog.log.info1(
             "+++ writing datafile (prehook): '{}'".format(prog.datafile))
+
+    try:
+        prog.datafile.parent.mkdir(parents=True)
+    except FileExistsError as ex:
+        # Note: this catch can be removed for python 3.5+ since mkdir()
+        # accepts the 'exist_ok' parameter.
+        if prog.datafile.parent.is_dir():
+            # if directory exists, that is fine
+            pass
+        else:
+            prog.log.error(
+                "creating datafile directory '{}' failed: {}".format(
+                                            ex.filename, ex.strerror.lower()))
+            return Prog.RetVal.exit_failure
+    except OSError as ex:
+        prog.log.error(
+            "creating datafile directory '{}' failed: {}".format(
+                                            ex.filename, ex.strerror.lower()))
+        return Prog.RetVal.exit_failure
+
 
     data = ""
 
@@ -198,9 +242,21 @@ def write_prehook(prog):
 
 
 def write_posthook(prog):
-    """
-    Calls:
-        - remove
+    """Write to datafile based on posthook mode operation ('posthook lines').
+
+    In posthook mode, the datafile needs to write lines (called
+    'posthook lines') that record what DANE records were published, or need
+    to be published or deleted, in addition to appropriate prehook lines,
+    which will have been previously read into the internal program state
+    object. This function will also set the permissions of the datafile
+    properly: permissions are changed before any meaningful data is written.
+
+    Args:
+        prog (State): contains the data to write.
+
+    Returns:
+        RetVal: returns 'RetVal.exit_failure' if any errors encountered,
+            'RetVal.ok' for success.
     """
     prog.log.info1("+++ writing to datafile '{}'".format(prog.datafile))
     data = ""
@@ -260,9 +316,17 @@ def write_posthook(prog):
 
 
 def remove(prog):
-    """
-    Calls:
-        - NONE
+    """Remove the datafile, if it exists.
+
+    If the datafile does not exist, we won't look a gift horse in the
+    mouth...
+
+    Args:
+        prog (State): not modified.
+
+    Returns:
+        RetVal: returns 'RetVal.exit_failure' if any errors encountered,
+            'RetVal.ok' for success. 
     """
     prog.log.info1("+++ removing datafile '{}'".format(prog.datafile))
     try:
@@ -272,16 +336,22 @@ def remove(prog):
     except OSError as ex:
         prog.log.error("removing datafile '{}' failed: {}".format(
                                             ex.filename, ex.strerror.lower()))
-        retval = True
         return Prog.RetVal.exit_failure
 
     return Prog.RetVal.ok
 
 
 def fix_permissions(prog):
-    """
-    Calls:
-        - None
+    """Ensure the datafile has the correct permissions.
+
+    'Correct' means mode 0600 and owned by root:root.
+
+    Args:
+        prog (State): not modified (except for logging).
+
+    Returns:
+        RetVal: returns 'True' if any errors encountered, 'False' for
+            success. 
     """
     prog.log.info3(" ++ checking/fixing mode of datafile: should be '0600'")
     try:

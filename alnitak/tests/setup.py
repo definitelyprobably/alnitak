@@ -9,14 +9,17 @@ from pathlib import Path
 
 
 def create_api_c4_obj(zone, email, key):
-    a = Prog.ApiCloudlare4()
+    a = Prog.ApiCloudflare4()
     a.zone = zone
     a.email = email
     a.key = key
     return a
 
-def create_api_binary_obj(command, *args, uid=None, gid=None):
-    prog = [ command ] + list(args)
+def create_api_binary_obj(command, uid=None, gid=None):
+    if isinstance(command, list):
+        prog = command
+    else:
+        prog = [ command ]
     return Prog.ApiBinary(prog, uid=uid, gid=gid)
 
 def create_tlsa_obj(param, port, protocol, domain, publish=True):
@@ -87,7 +90,7 @@ def uninstall_binary_program():
 
 
 class Init:
-    def __init__(self, parent="./.alnitak_root_tests", keep=False):
+    def __init__(self, parent="./.alnitak_tests", keep=False):
         self.parent = Path(parent)
         self.keep = keep
         if self.parent.exists():
@@ -100,6 +103,7 @@ class Init:
         self.live = self.le / 'live'
         self.archive = self.le / 'archive'
         self.varlog = self.parent / 'var' / 'log'
+        self.varlock = self.parent / 'var' / 'lock'
         self.datadir = self.parent / 'var' / 'alnitak'
         self.bin = self.parent / 'bin'
         self.dane = self.etc / 'alnitak'
@@ -107,6 +111,7 @@ class Init:
         self.live.mkdir(parents=True)
         self.archive.mkdir()
         self.varlog.mkdir(parents=True)
+        self.varlock.mkdir()
         self.datadir.mkdir()
         self.bin.mkdir()
         self.dane.mkdir()
@@ -121,6 +126,10 @@ class Init:
         self.config4 = self.etc / 'alnitak.conf.4'
         self.config5 = self.etc / 'alnitak.conf.5'
         self.config6 = self.etc / 'alnitak.conf.6'
+        self.config7 = self.etc / 'alnitak.conf.7'
+        self.config8 = self.etc / 'alnitak.conf.8'
+        #self.config9 = self.etc / 'alnitak.conf.9'
+            # was for testing locking
 
         self.configX1 = self.etc / 'alnitak.conf.X1'
         self.configX2 = self.etc / 'alnitak.conf.X2'
@@ -146,6 +155,8 @@ class Init:
         self.configX22 = self.etc / 'alnitak.conf.X22'
 
         self.binary = self.bin / 'dns'
+        #self.binary_wait = self.bin / 'wait'
+            # was for testing locking
 
         self.chain = '''-----BEGIN CERTIFICATE-----
 MIIEkjCCA3qgAwIBAgIQCgFBQgAAAVOFc2oLheynCDANBgkqhkiG9w0BAQsFADA/
@@ -654,7 +665,15 @@ fi
 exit 10
 ''')
 
+        # was for testing locking
+        #with open(str(self.binary), 'w') as file:
+#            file.write('''#!/bin/sh
+#sleep 2
+#''')
+
         self.binary.chmod(0o755)
+        #self.binary_wait.chmod(0o755)
+            # was for testing locking
 
 
         with open(str(self.config), 'w') as file:
@@ -798,6 +817,48 @@ exit 10
             [c.com ]
             tlsa=200 2
             '''.format(self.binary))
+
+        with open(str(self.config7), 'w') as file:
+            file.write('''
+            # example valid config file
+            #
+
+            api=binary {}
+
+            [a.com]
+            tlsa=201 12725
+
+            [b.com]
+            tlsa=201 12725
+            tlsa=212 12725
+            '''.format(self.binary))
+
+        with open(str(self.config8), 'w') as file:
+            file.write('''
+            # example valid config file
+            #
+
+            api=binary uid:'nobody' {}
+
+            [a.com]
+            tlsa=201 12725
+
+            [b.com]
+            tlsa=201 12725
+            tlsa=212 12725
+            '''.format(self.binary))
+
+        # was for testing locking
+        #with open(str(self.config9), 'w') as file:
+#            file.write('''
+#            # example valid config file
+#            #
+#
+#            api=binary uid:'nobody' {}
+#
+#            [a.com]
+#            tlsa=201 12725
+#            '''.format(self.binary_wait))
 
         with open(str(self.configX1), 'w') as file:
             file.write('''
@@ -1122,6 +1183,8 @@ def create_state_obj(init=None, config=None, recreate=True, lock=False,
         prog = Prog.State(lock=lock)
     else:
         prog = Prog.State(lock=lock, testing=True)
+
+    prog.lockfile = Path(init.varlock / 'alnitak.lock')
 
     prog.log.set_level(Prog.LogLevel.nolog)
     prog.recreate_dane = recreate

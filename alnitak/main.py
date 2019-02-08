@@ -16,38 +16,29 @@ from alnitak import datafile
 
 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#                            ENTRY FUNCTIONS                                #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-#            PRE                                      POST
-#    [1]  read_config                         [1]  read_config
-#    [2]  init_dane_directory                 [3]  set_renewed_domains
-#    [6]  live_to_archive                     [4]  read_datafile
-#    [8]  write_prehook_datafile              [5]  check_data
-#                                             [7]  process_data
-#           RESET                             [9]  write_posthook_datafile
-#    [1]  read_config
-#    [2]  init_dane_directory                         TEST
-#    [10] remove_datafile                     [1]  read_config
-
-
 def init_dane_directory(prog):
-    """
-    Calls:
-        - NONE
+    """Create the dane directory and dane domain subdirectories.
 
-    This function will check to see if the dane directory is 'sane' and will
-    create the necessary folders and symlinks if they are missing. It will not
-    try to fix mistakes unless prog.recreate_dane is set to True: it will exit
-    if errors are encountered. Note that even when prog.recreate_dane is set
-    to True, we will not remove files or folders that are no longer used
-    (e.g. if a previous config defined the domain 'x.com' and this program
-    created a directory 'x.com' in the dane directory, then if the config file
-    now replaces 'x.com' with 'y.com', we will certainly create a new
-    directory called 'y.com', but we will NOT remove 'x.com'). If a completely
-    clean directory is required, the user should manually remove the dane
-    directory and then call this program to create a new one from scratch.
+    This function will check to see if the dane directory is 'sane' and
+    will create the necessary folders and symlinks if they are missing.
+    It will not try to fix mistakes unless 'prog.recreate_dane' is set
+    to 'True': it will exit if errors are encountered.
+    Note that even when 'prog.recreate_dane' is set to 'True', we will
+    not remove files or folders that are no longer used (e.g. if a
+    previous config file defined the domain 'x.com' and this program
+    created a directory 'x.com' in the dane directory previously, if the
+    config file now replaces 'x.com' with 'y.com', we will certainly
+    create a new directory called 'y.com', but we will NOT remove 'x.com').
+    If a completely clean directory is required, the user should manually
+    remove the dane directory and then call this program to create a new
+    one from scratch.
+
+    Args:
+        prog (State): program internal state.
+
+    Returns:
+        RetVal: returns 'RetVal.exit_failure' if any errors are
+            encountered, and 'RetVal.ok' otherwise.
     """
     prog.log.info2("+++ initializing 'dane' direcory: '{}'".format(
                                                         prog.dane_directory))
@@ -88,6 +79,8 @@ def init_dane_directory(prog):
         prog.log.info2(
             " ++ checking/fixing owner of dane direcory: should be 'root:root'")
         try:
+            # when running tests (unless run as root) we won't have
+            # permissions to do this, so we have to skip this when testing
             if not prog.testing_mode:
                 os.chown(str(prog.dane_directory), 0, 0)
         except OSError as ex:
@@ -149,7 +142,8 @@ def init_dane_directory(prog):
             retval = Prog.RetVal.exit_failure
             continue
 
-        # implement 2): first, we get a list of symlinks in the live domain directory
+        # implement 2): first, we get a list of symlinks in the live domain
+        # directory
         prog.log.info3(
             "  + creating symlinks to live domain symlinks...".format(dane_d))
         try:
@@ -232,11 +226,11 @@ def init_dane_directory(prog):
             prog.log.error("domain '{}' from config file does not have a corresponding letsencrypt directory".format(t.domain))
             retval = Prog.RetVal.exit_failure
 
-    # now, prog.dane_domain_directories is a dictionary containing all directory
-    # names in the letsencrypt live directory, but we're not interested in
-    # _all_ of them, just the ones being used by this program; that is, only
-    # those defined in the config file (and hence in prog.target_list). So,
-    # let's remove the other ones:
+    # now, prog.dane_domain_directories is a dictionary containing all
+    # directory names in the letsencrypt live directory, but we're not
+    # interested in _all_ of them, just the ones being used by this
+    # program; that is, only those defined in the config file (and hence
+    # in prog.target_list). So, let's remove the other ones:
     new_dict = { }
     for d in prog.dane_domain_directories:
         if d in [ t.domain for t in prog.target_list ]:
@@ -250,18 +244,23 @@ def init_dane_directory(prog):
 
 
 def set_renewed_domains(prog):
-    """
-    Calls:
-        - NONE
+    """Check if the environment parameter 'RENEWED_DOMAINS' is set.
+
+    Args:
+        prog (State): program internal state.
+
+    Returns:
+        RetVal: always returns 'RetVal.ok'.
     """
     prog.log.info1("+++ checking environment parameter 'RENEWED_DOMAINS'")
     try:
         prog.renewed_domains = os.environ['RENEWED_DOMAINS'].split()
     except KeyError:
-        if prog.args.post:
-            prog.log.error(
-                    "no RENEWED_DOMAINS parameter set in the environment")
-            return Prog.RetVal.exit_failure
+        # Maybe never return an error if not set, even in posthook mode.
+        #if prog.args.post:
+        #    prog.log.error(
+        #            "no RENEWED_DOMAINS parameter set in the environment")
+        #    return Prog.RetVal.exit_failure
         prog.log.info1("  + not set")
         return Prog.RetVal.ok
 
@@ -274,9 +273,14 @@ def set_renewed_domains(prog):
 
 
 def live_to_archive(prog):
-    """
-    Calls:
-        - NONE
+    """Move dane symlinks from pointing to live certs to archive certs.
+
+    Args:
+        prog (State): program internal state.
+
+    Returns:
+        RetVal: returns 'RetVal.continue_failure' if any error is
+            encountred, and returns 'RetVal.ok' otherwise.
     """
     prog.log.info1("+++ moving dane symlinks to point from live to archive")
     retval = Prog.RetVal.ok
@@ -389,11 +393,20 @@ def live_to_archive(prog):
 
 
 def process_data(prog):
-    """
-    Calls:
-        - delete_dane_if_up
-        - process_data_prehook
-        - process_data_posthook
+    """Process datafile lines.
+
+    Data is organized in 'groups', which are collections of datafile lines
+    that share a common domain. First, withing every group, all the
+    delete lines are processed. Then we loop over the groups again, and if
+    there exist posthook lines, we call 'process_data_posthook', otherwise
+    we call 'process_data_prehook'.
+
+    Args:
+        prog (State): program internal state.
+
+    Returns:
+        RetVal: returns 'RetVal.continue_failure' if any error is
+            encountred, and returns 'RetVal.ok' otherwise.
     """
     retval = Prog.RetVal.ok
 
@@ -432,25 +445,19 @@ def process_data(prog):
 
 
 def exit(prog, value=0):
+    """Exit depending on the internal program state."""
     # so far, the only error setting that might be set is prog.log.errors.
-    if prog.log.errors:
-        value += 21
+    if prog.log.has_errors():
+        value += 16
     prog.log.info3("+++ exiting with code: {}".format(value))
     sys.exit(value)
 
 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#                           HELPER FUNCTIONS                                #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-
-#  II  processing data (datafile lines) functions
-#  ==============================================
-
 def delete_dane_if_up(prog, api, tlsa, hash1, hash2 = None):
-    """
-    Basically, all this function does is attempt to delete 'hash1'.
+    """Delete a DANE TLSA record.
+
+    Basically, all this function does is attempt to delete 'hash1':
 
     hash1 = {the old TLSA hash: need to see if it is up and then delete it}
     hash2 = None
@@ -472,16 +479,18 @@ def delete_dane_if_up(prog, api, tlsa, hash1, hash2 = None):
     causes repeated attempts at 2; and a failure of 3 causes a delete line to
     be made, and so causes 1.
 
-    Calls:
-        - cloudflare4.read
-        - cloudflare4.delete
-        - binary.delete
+    Args:
+        prog (State): program internal state.
 
-    Exceptions:
-        - Except.DNSSkipProcessing
-        - Except.DNSNotLive         - if no records up to delete (thrown by
-                                cloudflare4.read)
-        - Except.DNSProcessingError
+    Returns:
+        NoneType: always returns 'None'.
+
+    Raises:
+        DNSNotLive: if DANE record not up yet.
+        DNSProcessingError: if an error occurs that should cause Alnitak
+            to exit with an error code.
+        DNSNoReturnError: if an error occurs that requests that Alnitak do
+            not exit with an error code (raised from 'binary.delete').
     """
     prog.log.info1(
             "+++ attempting to delete TLSA DNS record: {}".format(tlsa.pstr()))
@@ -496,7 +505,7 @@ def delete_dane_if_up(prog, api, tlsa, hash1, hash2 = None):
                 if r == hash2:
                     break
             else:
-                raise Except.DNSSkipProcessing("TLSA record not up yet")
+                raise Except.DNSNotLive("TLSA record not up yet")
 
         # if the hash is in 'records', then we need to delete that
         # record
@@ -505,16 +514,24 @@ def delete_dane_if_up(prog, api, tlsa, hash1, hash2 = None):
                 cloudflare4.delete(prog, api, tlsa, records[r])
                 break
         else:
-            raise Except.DNSSkipProcessing("DANE record not up yet")
+            raise Except.DNSNotLive("TLSA record not up yet")
 
     else:
         binary.delete(prog, api, tlsa, hash1, hash2)
 
+
 def process_data_prehook(prog, group):
-    """
-    Calls:
-        - publish_dane
-        - archive_to_live
+    """Process prehook lines.
+
+    If the domain in the group is renewed, then call 'publish_dane',
+    otherwise call 'archive_to_live'.
+
+    Args:
+        prog (State): program internal state.
+        group (DataGroup): the group of prehook and/or posthook lines.
+
+    Returns:
+        bool: return 'True' for errors, 'False' otherwise.
     """
     if group.domain in prog.renewed_domains:
         prog.log.info1(
@@ -530,11 +547,20 @@ def process_data_prehook(prog, group):
         # move dane symlinks back to live
         return archive_to_live(prog, group)
 
+
 def process_data_posthook(prog, group):
-    """
-    Calls:
-        - process_data_posthook_renewed
-        - process_data_posthook_not_renewed
+    """Process posthook lines.
+
+    If the domain in the group is renewed, then call
+    'process_data_posthook_renewed', otherwise call
+    'process_data_posthook_not_renewed'.
+
+    Args:
+        prog (State): program internal state.
+        group (DataGroup): the group of prehook and/or posthook lines.
+
+    Returns:
+        bool: return 'True' for errors, 'False' otherwise.
     """
     if group.domain in prog.renewed_domains:
         prog.log.info1(
@@ -549,15 +575,21 @@ def process_data_posthook(prog, group):
         # the dane
         return process_data_posthook_not_renewed(prog, group)
 
+
 def process_data_posthook_not_renewed(prog, group):
-    """
-    Calls:
-        - certop.get_live
-        - certop.read_cert
-        - certop.get_hash
-        - delete_dane_if_up
-        - cloudflare4.publish
-        - binary.publish
+    """Process posthook lines for the non-renewed domain.
+
+    For all lines in the group, if the line's pending state is '0', then
+    delete the old TLSA record if the time-to-live value has passed,
+    otherwise, try to publish the TLSA record again (since it must have
+    failed last time).
+
+    Args:
+        prog (State): program internal state.
+        group (DataGroup): the group of prehook and/or posthook lines.
+
+    Returns:
+        bool: return 'True' for errors, 'False' otherwise.
     """
     errors = False
 
@@ -586,7 +618,7 @@ def process_data_posthook_not_renewed(prog, group):
                 prog.log.info2(
                         "  + old hash: going to use cert '{}'".format(cert))
 
-                cert_data = certop.read_cert(cert)
+                cert_data = certop.read_cert(cert, l.tlsa)
                 hash = certop.get_hash( l.tlsa.selector, l.tlsa.matching,
                                              cert_data)
                 prog.log.info2("  + old {}{}{} hash: {}".format(
@@ -644,11 +676,22 @@ def process_data_posthook_not_renewed(prog, group):
 
     return errors
 
+
 def process_data_posthook_renewed(prog, group):
-    """
-    Calls:
-        - delete_dane_if_up
-        - process_data_prehook
+    """Process posthook lines for the renewed domain.
+
+    For all lines in the group, if the line's pending state is '0', then
+    mark the old 'new' TLSA record for deletion, publish the renewed
+    certificate's TLSA record and then try deleting the old record. If the
+    pending state is '1' then just publish the renewed certificate's
+    TLSA record.
+
+    Args:
+        prog (State): program internal state.
+        group (DataGroup): the group of prehook and/or posthook lines.
+
+    Returns:
+        bool: return 'True' for errors, 'False' otherwise.
     """
     # if the domain is renewed, for every posthook line, we check the pending
     # state: if it is '0', then we try to _delete_ the recorded hash if it is
@@ -671,7 +714,7 @@ def process_data_posthook_renewed(prog, group):
             cert = certop.get_live(l.tlsa, group.pre)
             prog.log.info2("  + going to use cert '{}'".format(cert))
 
-            cert_data = certop.read_cert(cert)
+            cert_data = certop.read_cert(cert, l.tlsa)
 
             hash = certop.get_hash(l.tlsa.selector, l.tlsa.matching, cert_data)
 
@@ -752,14 +795,19 @@ def process_data_posthook_renewed(prog, group):
 
     return errors
 
+
 def publish_dane(prog, group):
-    """
-    Calls:
-        - certop.get_live
-        - certop.read_cert
-        - certop.get_hash
-        - cloudflare4.publish
-        - binary.publish
+    """Publish a DANE record.
+
+    Called in posthook mode, for renewed or non-renewed domains, this
+    function will try to publish DANE TLSA records.
+
+    Args:
+        prog (State): program internal state.
+        group (DataGroup): the group of prehook and/or posthook lines.
+
+    Returns:
+        bool: return 'True' for errors, 'False' otherwise.
     """
     errors = False
 
@@ -776,7 +824,7 @@ def publish_dane(prog, group):
             cert = certop.get_live(tlsa, group.pre)
             prog.log.info2("  + going to use cert '{}'".format(cert))
 
-            cert_input = certop.read_cert(cert)
+            cert_input = certop.read_cert(cert, tlsa)
 
             hash = certop.get_hash(tlsa.selector, tlsa.matching,
                                         cert_input)
@@ -813,14 +861,21 @@ def publish_dane(prog, group):
         for l in group.pre:
             l.pending_on()
     else:
-        return errors or archive_to_live(prog, group)
+        errors2 = archive_to_live(prog, group)
+        return errors or errors2
 
     return errors
 
+
 def archive_to_live(prog, group):
-    """
-    Calls:
-        - create_symlink
+    """Move dane symlinks from pointing to archive certs to back to live certs.
+
+    Args:
+        prog (State): program internal state.
+        group (DataGroup): the group of prehook and/or posthook lines.
+
+    Returns:
+        bool: return 'True' for errors, 'False' otherwise.
     """
     prog.log.info1(" ++ moving dane symlinks to point from archive to live")
     errors = False
@@ -839,6 +894,20 @@ def archive_to_live(prog, group):
 
 # TODO: use me? use me!
 def create_symlink(prog, symlink, to):
+    """Create a symlink.
+
+    Note that this function will try to write relative-path symlinks.
+
+    Args:
+        prog (State): program internal state.
+        symlink (pathlib.Path): symlink file to create.
+        to (pathilb.Path): path the symlink file points to. Can be an
+            absolute or relative path: this function will handle either
+            case properly.
+
+    Returns:
+        bool: return 'True' for errors, 'False' otherwise.
+    """
     try:
         symlink.unlink()
     except FileNotFoundError as ex:
@@ -864,15 +933,25 @@ def create_symlink(prog, symlink, to):
 
 
 def relative_to(path, target):
-    # target = /a/b/c/X
-    # path = /a/b/d/c/Y
-    #
-    # should return '../../c/X'
+    """Return the relative path of the input to the target path.
+
+    For example:
+        path = /a/b/d/c/Y
+        target = /a/b/c/X
+    Then this function will return:
+        '../../c/X'
+
+    Args:
+        path (pathlib.Path):
+        target (pathlib.Path):
+
+    Returns:
+        str: the path of 'path' relative to 'target'.
+    """
     #   we step back through 'path' until the parent directory matches a
     #   parent directory of 'target'. We then construct the return by
     #   adding N (../) paths for the N steps back and then appending the
     #   path in 'target' that was not matched in the comparison.
-
     for n, p in enumerate(path.parents):
         try:
             q = target.relative_to(p)
@@ -889,21 +968,23 @@ def relative_to(path, target):
 
 
 def main():
+    """Alnitak program entry function."""
 
     prog = Prog.State()
 
-
     parser = argparse.ArgumentParser(
             prog=prog.name,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
             usage="%(prog)s [options]",
-            description="This program helps to automatically manage DANE records when Let's Encrypt (letsencrypt) certificates are renewed.",
-            epilog="{} {}\n{}".format(prog.name, prog.version, prog.copyright)
+            description="""This program helps to automatically manage DANE records when Let's Encrypt
+certificates are renewed.""",
+            epilog="""{} {}
+{}""".format(prog.name, prog.version, prog.copyright)
             )
 
     parser.add_argument("-V", "--version",
             help="print the program version and exit.",
             action='store_true')
-
 
     mode = parser.add_mutually_exclusive_group()
 
@@ -923,7 +1004,6 @@ def main():
             help="recreate the symlinks in the dane directory",
             action='store_true')
 
-
     parser.add_argument("--dane-directory",
             help="directory containing the DANE certificates")
 
@@ -942,15 +1022,12 @@ def main():
             choices=["normal", "verbose", "full", "no"])
 
     parser.add_argument("-q", "--quiet",
-            help="suppress output to stdout and stderr",
+            help="suppress output to stdout and stderr (but not logfile)",
             action='store_true')
 
     parser.add_argument("-c", "--config",
             help="read the specified config file")
 
-    #parser.add_argument("--", help="", action='store_true')
-    #parser.add_argument("--", help="", action='store_true')
-    #parser.add_argument("--", help="", action='store_true')
 
     args = parser.parse_args()
     exec_list = None
@@ -967,9 +1044,9 @@ def main():
             sys.exit(2)
         prog.set_ttl(args.ttl)
 
+    # must set 'prog.log.quiet' before the other 'prog.log' details.
     if args.quiet:
-        prog.quiet = True
-
+        prog.log.quiet = True
 
     if args.log:
         if args.log == 'stdout' or args.log == '-':
@@ -1022,10 +1099,43 @@ def main():
                       datafile.write_posthook ]
 
 
-    if not prog.init_logging(args):
-        sys.exit(20)
+    # first create a lock:
+    try:
+        if prog.lock():
+            if not args.quiet:
+                print("alnitak: another instance is already running.")
+            sys.exit(32)
+                # don't call exit(prog, 32): nothing worth logging, so if
+                # there's an error, we'll just ignore it.
+    except Except.LockError as ex:
+        if not args.quiet:
+            print("error: {}.".format(ex.message), file=sys.stderr)
+        sys.exit(4)
+            # don't call exit(prog, 4): nothing worth logging, so if
+            # there's an error, we'll just ignore it.
 
 
+    # next initialize logging
+    prog.init_logging(args)
+
+
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    #                       ENTRY FUNCTIONS                             #
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+    #            PRE                                POST
+    #    [1]  read_config                   [1]  read_config
+    #    [2]  init_dane_directory           [3]  set_renewed_domains
+    #    [6]  live_to_archive               [4]  read_datafile
+    #    [8]  write_prehook_datafile        [5]  check_data
+    #                                       [7]  process_data
+    #           RESET                       [9]  write_posthook_datafile
+    #    [1]  read_config
+    #    [2]  init_dane_directory                   TEST
+    #    [10] remove_datafile               [1]  read_config
+
+
+    # then run the rest of the code
     for prog_call in exec_list:
         retval = prog_call(prog)
         if retval == Prog.RetVal.ok:

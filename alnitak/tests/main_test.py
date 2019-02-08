@@ -28,7 +28,8 @@ def test_success_config_default():
         prog = setup.create_state_obj(s, config=s.config3)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
@@ -50,7 +51,6 @@ def test_success_config_default():
     assert prog.target_list == [ta, tb, tc]
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
-    assert prog.datafile_lines == []
 
     retval = main.init_dane_directory(prog)
 
@@ -391,7 +391,6 @@ def test_success_config_default():
             assert wd[0:namelen] == name
 
 
-
 def test_success_2xx_up_config_default():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
@@ -404,7 +403,8 @@ def test_success_2xx_up_config_default():
         prog = setup.create_state_obj(s, config=s.config3)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
@@ -426,7 +426,6 @@ def test_success_2xx_up_config_default():
     assert prog.target_list == [ta, tb, tc]
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
-    assert prog.datafile_lines == []
 
     retval = main.init_dane_directory(prog)
 
@@ -801,7 +800,6 @@ def test_success_2xx_up_config_default():
             assert wd[0:namelen] == name
 
 
-
 def test_hashes():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
@@ -814,7 +812,8 @@ def test_hashes():
         prog = setup.create_state_obj(s, config=s.config4)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
@@ -840,7 +839,6 @@ def test_hashes():
     assert prog.target_list == [ta]
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
-    assert prog.datafile_lines == []
 
     retval = main.init_dane_directory(prog)
 
@@ -1142,14 +1140,551 @@ def test_hashes():
 
 
 
+def test_2xx_only():
+    s = setup.Init(keep=True)
+    if os.getuid() != 0:
+        uid = None
+        gid = None
+        prog = setup.create_state_obj(s, config=s.config7)
+    else:
+        uid = pwd.getpwnam('nobody').pw_uid
+        gid = None
+        prog = setup.create_state_obj(s, config=s.config8)
+    cwd = Path.cwd()
 
-# soft failure tests
-#   posthook (first publish fails)
-#   ttl passed (publish still fails)
-#   ttl passed (publish succeeds, old delete fails)
-#   ttl passed (old delete fails)
-#   ttl passed (old delete succeeds)
-#
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
+
+    retval = config.read(prog)
+    assert retval == Prog.RetVal.ok
+
+    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+
+    t_a1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
+    ta = setup.create_target_obj('a.com', api, [], [t_a1])
+
+    t_b1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'b.com')
+    t_b2 = setup.create_tlsa_obj('212', '12725', 'tcp', 'b.com')
+    tb = setup.create_target_obj('b.com', api, [], [t_b1, t_b2])
+
+    assert prog.target_list == [ta, tb]
+    assert prog.dane_domain_directories == {}
+    assert prog.renewed_domains == []
+
+    retval = main.init_dane_directory(prog)
+
+    assert retval == Prog.RetVal.ok
+    assert s.dane.exists()
+    assert Path(s.dane / 'a.com').exists()
+    assert Path(s.dane / 'b.com').exists()
+    assert Path(s.dane / 'c.com').exists()
+    assert os.readlink(str(s.dane / 'a.com' / 'cert.pem')) == \
+                                        '../../le/live/a.com/cert.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'chain.pem')) == \
+                                        '../../le/live/a.com/chain.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'fullchain.pem')) == \
+                                        '../../le/live/a.com/fullchain.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'privkey.pem')) == \
+                                        '../../le/live/a.com/privkey.pem'
+
+    assert os.readlink(str(s.dane / 'b.com' / 'cert.pem')) == \
+                                        '../../le/live/b.com/cert.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'chain.pem')) == \
+                                        '../../le/live/b.com/chain.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'fullchain.pem')) == \
+                                        '../../le/live/b.com/fullchain.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
+                                        '../../le/live/b.com/privkey.pem'
+
+    retval = main.live_to_archive(prog)
+
+    assert retval == Prog.RetVal.ok
+
+    rd = { 'a.com': [ 'cert.pem', 'chain.pem', 'privkey.pem', 'fullchain.pem' ],
+           'b.com': [ 'cert.pem', 'chain.pem', 'privkey.pem', 'fullchain.pem' ],
+         }
+
+    assert len(prog.dane_domain_directories) == 2
+    for d in prog.dane_domain_directories:
+        assert sorted(prog.dane_domain_directories[d]) == sorted(rd[d])
+
+    assert os.readlink(str(s.dane / 'a.com' / 'cert.pem')) == \
+                                        '../../le/archive/a.com/cert1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'chain.pem')) == \
+                                        '../../le/archive/a.com/chain1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'fullchain.pem')) == \
+                                        '../../le/archive/a.com/fullchain1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'privkey.pem')) == \
+                                        '../../le/archive/a.com/privkey1.pem'
+
+    assert os.readlink(str(s.dane / 'b.com' / 'cert.pem')) == \
+                                        '../../le/archive/b.com/cert1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'chain.pem')) == \
+                                        '../../le/archive/b.com/chain1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'fullchain.pem')) == \
+                                        '../../le/archive/b.com/fullchain1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
+                                        '../../le/archive/b.com/privkey1.pem'
+
+    retval = datafile.write_prehook(prog)
+    assert retval == Prog.RetVal.ok
+
+    with open(str(prog.datafile), 'r') as file:
+        df = file.read().splitlines()
+
+    df_lines = []
+    for k in df[2:]:
+        df_lines += [ shlex.split(k) ]
+
+    lines = [
+                setup.prehook_line(s, cwd, 'a.com', 'cert1.pem', 0),
+                setup.prehook_line(s, cwd, 'a.com', 'chain1.pem', 0),
+                setup.prehook_line(s, cwd, 'a.com', 'fullchain1.pem', 0),
+                setup.prehook_line(s, cwd, 'a.com', 'privkey1.pem', 0),
+                setup.prehook_line(s, cwd, 'b.com', 'cert1.pem', 0),
+                setup.prehook_line(s, cwd, 'b.com', 'chain1.pem', 0),
+                setup.prehook_line(s, cwd, 'b.com', 'fullchain1.pem', 0),
+                setup.prehook_line(s, cwd, 'b.com', 'privkey1.pem', 0),
+            ]
+    assert sorted(df_lines) == sorted(lines)
+
+
+
+    # first posthook call
+    sleep(sleep_time)
+    setup.clear_state(prog)
+    ptime = "{:%s}".format(prog.timenow)
+
+    retval = config.read(prog)
+    assert retval == Prog.RetVal.ok
+
+    s.renew_a()
+    s.renew_b()
+    prog.renewed_domains = [ 'a.com', 'b.com' ]
+
+    retval = datafile.read(prog)
+    assert retval == Prog.RetVal.ok
+
+    retval = datafile.check_data(prog)
+    assert retval == Prog.RetVal.ok
+
+    prog.data.groups[0].target.api.command = [str(s.bin / 'dns')]
+
+    retval = main.process_data(prog)
+    assert retval == Prog.RetVal.ok
+
+    retval = datafile.write_posthook(prog)
+    assert retval == Prog.RetVal.ok
+
+    with open(str(prog.datafile), 'r') as file:
+        df = file.read().splitlines()
+
+    df_lines = []
+    for k in df[2:]:
+        df_lines += [ shlex.split(k) ]
+
+    lines = [
+                setup.prehook_line(s, cwd, 'a.com', 'cert1.pem', 1),
+                setup.prehook_line(s, cwd, 'a.com', 'chain1.pem', 1),
+                setup.prehook_line(s, cwd, 'a.com', 'fullchain1.pem', 1),
+                setup.prehook_line(s, cwd, 'a.com', 'privkey1.pem', 1),
+                setup.prehook_line(s, cwd, 'b.com', 'cert1.pem', 1),
+                setup.prehook_line(s, cwd, 'b.com', 'chain1.pem', 1),
+                setup.prehook_line(s, cwd, 'b.com', 'fullchain1.pem', 1),
+                setup.prehook_line(s, cwd, 'b.com', 'privkey1.pem', 1),
+                [ 'a.com', '201', '12725', 'tcp', 'a.com', ptime, '0',
+                  s.hash['a.com']['cert2'][201] ],
+                [ 'b.com', '201', '12725', 'tcp', 'b.com', ptime, '0',
+                  s.hash['b.com']['cert2'][201] ],
+                [ 'b.com', '212', '12725', 'tcp', 'b.com', ptime, '0',
+                  s.hash['b.com']['cert2'][212] ],
+            ]
+    assert sorted(df_lines) == sorted(lines)
+
+    with open(str(s.data / 'calls'), 'r') as file:
+        cl = file.read().splitlines()
+
+    calls = [
+            setup.call_line('p', "", 201,
+                            s.hash['a.com']['cert2'][201]),
+            setup.call_line('p', "", 201,
+                            s.hash['b.com']['cert2'][201]),
+            setup.call_line('p', "", 212,
+                            s.hash['b.com']['cert2'][212]),
+            ]
+    assert cl == calls
+
+
+    assert os.readlink(str(s.dane / 'a.com' / 'cert.pem')) == \
+                                        '../../le/archive/a.com/cert1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'chain.pem')) == \
+                                        '../../le/archive/a.com/chain1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'fullchain.pem')) == \
+                                        '../../le/archive/a.com/fullchain1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'privkey.pem')) == \
+                                        '../../le/archive/a.com/privkey1.pem'
+
+    assert os.readlink(str(s.dane / 'b.com' / 'cert.pem')) == \
+                                        '../../le/archive/b.com/cert1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'chain.pem')) == \
+                                        '../../le/archive/b.com/chain1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'fullchain.pem')) == \
+                                        '../../le/archive/b.com/fullchain1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
+                                        '../../le/archive/b.com/privkey1.pem'
+
+
+
+
+    # posthook renewed again
+    sleep(sleep_time)
+    setup.clear_state(prog)
+    ptime2 = "{:%s}".format(prog.timenow)
+
+    retval = config.read(prog)
+    assert retval == Prog.RetVal.ok
+
+    s.renew_a()
+    s.renew_b()
+    prog.renewed_domains = [ 'a.com', 'b.com' ]
+
+    retval = datafile.read(prog)
+    assert retval == Prog.RetVal.ok
+
+    retval = datafile.check_data(prog)
+    assert retval == Prog.RetVal.ok
+
+    prog.data.groups[0].target.api.command = [
+                                        str(s.bin / 'dns'), '--is-up=201:212' ]
+
+    retval = main.process_data(prog)
+    assert retval == Prog.RetVal.ok
+
+    retval = datafile.write_posthook(prog)
+    assert retval == Prog.RetVal.ok
+
+    with open(str(prog.datafile), 'r') as file:
+        df = file.read().splitlines()
+
+    df_lines = []
+    for k in df[2:]:
+        df_lines += [ shlex.split(k) ]
+
+    lines = [
+                setup.prehook_line(s, cwd, 'a.com', 'cert1.pem', 1),
+                setup.prehook_line(s, cwd, 'a.com', 'chain1.pem', 1),
+                setup.prehook_line(s, cwd, 'a.com', 'fullchain1.pem', 1),
+                setup.prehook_line(s, cwd, 'a.com', 'privkey1.pem', 1),
+                setup.prehook_line(s, cwd, 'b.com', 'cert1.pem', 1),
+                setup.prehook_line(s, cwd, 'b.com', 'chain1.pem', 1),
+                setup.prehook_line(s, cwd, 'b.com', 'fullchain1.pem', 1),
+                setup.prehook_line(s, cwd, 'b.com', 'privkey1.pem', 1),
+                [ 'a.com', '201', '12725', 'tcp', 'a.com', ptime, '0',
+                  s.hash['a.com']['cert2'][201] ],
+                [ 'b.com', '201', '12725', 'tcp', 'b.com', ptime, '0',
+                  s.hash['b.com']['cert2'][201] ],
+                [ 'b.com', '212', '12725', 'tcp', 'b.com', ptime, '0',
+                  s.hash['b.com']['cert2'][212] ],
+            ]
+    assert sorted(df_lines) == sorted(lines)
+
+
+    with open(str(s.data / 'calls'), 'r') as file:
+        cl = file.read().splitlines()
+
+    calls = [
+            setup.call_line('p', "", 201,
+                            s.hash['a.com']['cert2'][201]),
+            setup.call_line('p', "", 201,
+                            s.hash['b.com']['cert2'][201]),
+            setup.call_line('p', "", 212,
+                            s.hash['b.com']['cert2'][212]),
+            ]
+    assert cl == calls
+
+
+    assert os.readlink(str(s.dane / 'a.com' / 'cert.pem')) == \
+                                        '../../le/archive/a.com/cert1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'chain.pem')) == \
+                                        '../../le/archive/a.com/chain1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'fullchain.pem')) == \
+                                        '../../le/archive/a.com/fullchain1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'privkey.pem')) == \
+                                        '../../le/archive/a.com/privkey1.pem'
+
+    assert os.readlink(str(s.dane / 'b.com' / 'cert.pem')) == \
+                                        '../../le/archive/b.com/cert1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'chain.pem')) == \
+                                        '../../le/archive/b.com/chain1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'fullchain.pem')) == \
+                                        '../../le/archive/b.com/fullchain1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
+                                        '../../le/archive/b.com/privkey1.pem'
+
+
+
+    # ttl passed
+    sleep(sleep_time)
+    setup.clear_state(prog)
+    ptime3 = "{:%s}".format(prog.timenow)
+    prog.ttl = 0
+
+    retval = config.read(prog)
+    assert retval == Prog.RetVal.ok
+
+    retval = datafile.read(prog)
+    assert retval == Prog.RetVal.ok
+
+    retval = datafile.check_data(prog)
+    assert retval == Prog.RetVal.ok
+
+    prog.data.groups[0].target.api.command = [
+                                        str(s.bin / 'dns'), "--is-up=201:212" ]
+
+    retval = main.process_data(prog)
+    assert retval == Prog.RetVal.ok
+
+    retval = datafile.write_posthook(prog)
+    assert retval == Prog.RetVal.ok
+
+    assert not prog.datafile.exists()
+
+    with open(str(s.data / 'calls'), 'r') as file:
+        cl = file.read().splitlines()
+
+    calls = [
+            setup.call_line('d', "--is-up=201:212", 201,
+                            s.hash['a.com']['cert1'][201],
+                            s.hash['a.com']['cert2'][201]),
+            setup.call_line('d', "--is-up=201:212", 201,
+                            s.hash['b.com']['cert1'][201],
+                            s.hash['b.com']['cert2'][201]),
+            setup.call_line('d', "--is-up=201:212", 212,
+                            s.hash['b.com']['cert1'][212],
+                            s.hash['b.com']['cert2'][212]),
+            ]
+    assert cl[3:] == calls
+
+
+    assert os.readlink(str(s.dane / 'a.com' / 'cert.pem')) == \
+                                        '../../le/live/a.com/cert.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'chain.pem')) == \
+                                        '../../le/live/a.com/chain.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'fullchain.pem')) == \
+                                        '../../le/live/a.com/fullchain.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'privkey.pem')) == \
+                                        '../../le/live/a.com/privkey.pem'
+
+    assert os.readlink(str(s.dane / 'b.com' / 'cert.pem')) == \
+                                        '../../le/live/b.com/cert.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'chain.pem')) == \
+                                        '../../le/live/b.com/chain.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'fullchain.pem')) == \
+                                        '../../le/live/b.com/fullchain.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
+                                        '../../le/live/b.com/privkey.pem'
+
+
+    with open(str(s.data / 'user'), 'r') as f:
+        whodata = f.read().splitlines()
+
+    if os.getuid() == 0:
+        for wd in whodata:
+            assert wd[0:7] == "nobody:"
+    else:
+        name = pwd.getpwuid(os.getuid()).pw_name
+        namelen = len(name)
+        for wd in whodata:
+            assert wd[0:namelen] == name
+
+
+
+def test_2xx_only_already_up():
+    s = setup.Init(keep=True)
+    if os.getuid() != 0:
+        uid = None
+        gid = None
+        prog = setup.create_state_obj(s, config=s.config7)
+    else:
+        uid = pwd.getpwnam('nobody').pw_uid
+        gid = None
+        prog = setup.create_state_obj(s, config=s.config8)
+    cwd = Path.cwd()
+
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
+
+    retval = config.read(prog)
+    assert retval == Prog.RetVal.ok
+
+    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+
+    t_a1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
+    ta = setup.create_target_obj('a.com', api, [], [t_a1])
+
+    t_b1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'b.com')
+    t_b2 = setup.create_tlsa_obj('212', '12725', 'tcp', 'b.com')
+    tb = setup.create_target_obj('b.com', api, [], [t_b1, t_b2])
+
+    assert prog.target_list == [ta, tb]
+    assert prog.dane_domain_directories == {}
+    assert prog.renewed_domains == []
+
+    retval = main.init_dane_directory(prog)
+
+    assert retval == Prog.RetVal.ok
+    assert s.dane.exists()
+    assert Path(s.dane / 'a.com').exists()
+    assert Path(s.dane / 'b.com').exists()
+    assert Path(s.dane / 'c.com').exists()
+    assert os.readlink(str(s.dane / 'a.com' / 'cert.pem')) == \
+                                        '../../le/live/a.com/cert.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'chain.pem')) == \
+                                        '../../le/live/a.com/chain.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'fullchain.pem')) == \
+                                        '../../le/live/a.com/fullchain.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'privkey.pem')) == \
+                                        '../../le/live/a.com/privkey.pem'
+
+    assert os.readlink(str(s.dane / 'b.com' / 'cert.pem')) == \
+                                        '../../le/live/b.com/cert.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'chain.pem')) == \
+                                        '../../le/live/b.com/chain.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'fullchain.pem')) == \
+                                        '../../le/live/b.com/fullchain.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
+                                        '../../le/live/b.com/privkey.pem'
+
+    retval = main.live_to_archive(prog)
+
+    assert retval == Prog.RetVal.ok
+
+    rd = { 'a.com': [ 'cert.pem', 'chain.pem', 'privkey.pem', 'fullchain.pem' ],
+           'b.com': [ 'cert.pem', 'chain.pem', 'privkey.pem', 'fullchain.pem' ],
+         }
+
+    assert len(prog.dane_domain_directories) == 2
+    for d in prog.dane_domain_directories:
+        assert sorted(prog.dane_domain_directories[d]) == sorted(rd[d])
+
+    assert os.readlink(str(s.dane / 'a.com' / 'cert.pem')) == \
+                                        '../../le/archive/a.com/cert1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'chain.pem')) == \
+                                        '../../le/archive/a.com/chain1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'fullchain.pem')) == \
+                                        '../../le/archive/a.com/fullchain1.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'privkey.pem')) == \
+                                        '../../le/archive/a.com/privkey1.pem'
+
+    assert os.readlink(str(s.dane / 'b.com' / 'cert.pem')) == \
+                                        '../../le/archive/b.com/cert1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'chain.pem')) == \
+                                        '../../le/archive/b.com/chain1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'fullchain.pem')) == \
+                                        '../../le/archive/b.com/fullchain1.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
+                                        '../../le/archive/b.com/privkey1.pem'
+
+    retval = datafile.write_prehook(prog)
+    assert retval == Prog.RetVal.ok
+
+    with open(str(prog.datafile), 'r') as file:
+        df = file.read().splitlines()
+
+    df_lines = []
+    for k in df[2:]:
+        df_lines += [ shlex.split(k) ]
+
+    lines = [
+                setup.prehook_line(s, cwd, 'a.com', 'cert1.pem', 0),
+                setup.prehook_line(s, cwd, 'a.com', 'chain1.pem', 0),
+                setup.prehook_line(s, cwd, 'a.com', 'fullchain1.pem', 0),
+                setup.prehook_line(s, cwd, 'a.com', 'privkey1.pem', 0),
+                setup.prehook_line(s, cwd, 'b.com', 'cert1.pem', 0),
+                setup.prehook_line(s, cwd, 'b.com', 'chain1.pem', 0),
+                setup.prehook_line(s, cwd, 'b.com', 'fullchain1.pem', 0),
+                setup.prehook_line(s, cwd, 'b.com', 'privkey1.pem', 0),
+            ]
+    assert sorted(df_lines) == sorted(lines)
+
+
+
+    # first posthook call
+    sleep(sleep_time)
+    setup.clear_state(prog)
+    ptime = "{:%s}".format(prog.timenow)
+
+    retval = config.read(prog)
+    assert retval == Prog.RetVal.ok
+
+    s.renew_a()
+    s.renew_b()
+    prog.renewed_domains = [ 'a.com', 'b.com' ]
+
+    retval = datafile.read(prog)
+    assert retval == Prog.RetVal.ok
+
+    retval = datafile.check_data(prog)
+    assert retval == Prog.RetVal.ok
+
+    prog.data.groups[0].target.api.command = [
+                                        str(s.bin / 'dns'), '--is-up=201:212' ]
+
+    retval = main.process_data(prog)
+    assert retval == Prog.RetVal.ok
+
+    retval = datafile.write_posthook(prog)
+    assert retval == Prog.RetVal.ok
+
+    assert not prog.datafile.exists()
+
+    with open(str(s.data / 'calls'), 'r') as file:
+        cl = file.read().splitlines()
+
+    calls = [
+            setup.call_line('p', "--is-up=201:212", 201,
+                            s.hash['a.com']['cert2'][201]),
+            setup.call_line('p', "--is-up=201:212", 201,
+                            s.hash['b.com']['cert2'][201]),
+            setup.call_line('p', "--is-up=201:212", 212,
+                            s.hash['b.com']['cert2'][212]),
+            ]
+    assert cl == calls
+
+
+    assert os.readlink(str(s.dane / 'a.com' / 'cert.pem')) == \
+                                        '../../le/live/a.com/cert.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'chain.pem')) == \
+                                        '../../le/live/a.com/chain.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'fullchain.pem')) == \
+                                        '../../le/live/a.com/fullchain.pem'
+    assert os.readlink(str(s.dane / 'a.com' / 'privkey.pem')) == \
+                                        '../../le/live/a.com/privkey.pem'
+
+    assert os.readlink(str(s.dane / 'b.com' / 'cert.pem')) == \
+                                        '../../le/live/b.com/cert.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'chain.pem')) == \
+                                        '../../le/live/b.com/chain.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'fullchain.pem')) == \
+                                        '../../le/live/b.com/fullchain.pem'
+    assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
+                                        '../../le/live/b.com/privkey.pem'
+
+
+    with open(str(s.data / 'user'), 'r') as f:
+        whodata = f.read().splitlines()
+
+    if os.getuid() == 0:
+        for wd in whodata:
+            assert wd[0:7] == "nobody:"
+    else:
+        name = pwd.getpwuid(os.getuid()).pw_name
+        namelen = len(name)
+        for wd in whodata:
+            assert wd[0:namelen] == name
+
+
+
 
 def test_single_renewal_soft_fail():
     s = setup.Init(keep=True)
@@ -1163,7 +1698,8 @@ def test_single_renewal_soft_fail():
         prog = setup.create_state_obj(s, config=s.config5)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
@@ -1179,7 +1715,6 @@ def test_single_renewal_soft_fail():
     assert prog.target_list == [ta]
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
-    assert prog.datafile_lines == []
 
     retval = main.init_dane_directory(prog)
 
@@ -1574,7 +2109,8 @@ def test_single_renewal_2xx_up_soft_fail():
         prog = setup.create_state_obj(s, config=s.config5)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
@@ -1590,7 +2126,6 @@ def test_single_renewal_2xx_up_soft_fail():
     assert prog.target_list == [ta]
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
-    assert prog.datafile_lines == []
 
     retval = main.init_dane_directory(prog)
 
@@ -1952,7 +2487,8 @@ def test_single_renewal_2xx_delayed_up_soft_fail():
         prog = setup.create_state_obj(s, config=s.config5)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
@@ -1968,7 +2504,6 @@ def test_single_renewal_2xx_delayed_up_soft_fail():
     assert prog.target_list == [ta]
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
-    assert prog.datafile_lines == []
 
     retval = main.init_dane_directory(prog)
 
@@ -2326,14 +2861,6 @@ def test_single_renewal_2xx_delayed_up_soft_fail():
 
 
 
-# soft failure tests
-#   posthook (publish succeeds)
-#   posthook (renewal again, publish succeeds, delete fails)
-#   posthook (renewal again, publish fails, delete fails)
-#   ttl passed (old delete succeeds)
-#   ttl passed (old delete succeeds)
-#
-
 def test_multi_renewal_soft_fail():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
@@ -2346,7 +2873,8 @@ def test_multi_renewal_soft_fail():
         prog = setup.create_state_obj(s, config=s.config5)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
@@ -2362,7 +2890,6 @@ def test_multi_renewal_soft_fail():
     assert prog.target_list == [ta]
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
-    assert prog.datafile_lines == []
 
     retval = main.init_dane_directory(prog)
 
@@ -3057,7 +3584,8 @@ def test_multi_renewal_2xx_up_soft_fail():
         prog = setup.create_state_obj(s, config=s.config5)
     cwd = Path.cwd()
 
-    assert prog.log.init(prog.name, prog.version, prog.timenow)
+    prog.log.init(prog.name, prog.version, prog.timenow)
+    assert not prog.log.has_errors()
 
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
@@ -3073,7 +3601,6 @@ def test_multi_renewal_2xx_up_soft_fail():
     assert prog.target_list == [ta]
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
-    assert prog.datafile_lines == []
 
     retval = main.init_dane_directory(prog)
 
@@ -3759,23 +4286,3 @@ def test_multi_renewal_2xx_up_soft_fail():
 
 
 
-
-# issues in prev function
-# clashing: what happens if:
-#
-#   renew cert1 -> cert2
-#     publish 201 record (pending '0')
-#     publish 311 record (pending '0')
-#   renew cert2 -> cert3
-#     201 doesn't change, stays pending '0'
-#     311 deletion fails: delete line created
-#           posthook: a.com 201 ... 0
-#           posthook: a.com 311 ... 1
-#           delete:   a.com 311 cert2
-#
-#    now, what happens if:
-#    renew cert3 -> cert4 (and cert4 == cert2)?
-#    we will be doing a delete (from the delete line) for a 311 on cert2
-#    but trying to publish a 311 cert2! Probably, what needs to be done is
-#    that every delete MUST check that it does not match a live hash to
-#    publish.
