@@ -1,5 +1,18 @@
 # Alnitak Changelog
 
+## 0.1.4
+
+* Fixed missing package info and misconfigured info for PyPI.
+* Markdown mistakes in README.md fixed.
+
+## 0.1.3
+
+* Fixed the package homepage in v0.1.2 which still did not work.
+
+## 0.1.2
+
+* Changed package homepage in the setup.py script.
+
 ## 0.1.1
 
 * Made the logging code more robust (perhaps overkill...).

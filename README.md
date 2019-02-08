@@ -52,13 +52,13 @@ With the example above, your filesystem will look like this:
     │           ├── fullchain.pem@  ->  ../../archive/example.com/fullchain1.pem
     │           └── privkey.pem@  ->  ../../archive/example.com/privkey1.pem
     │
-    └── alnitak/
-        └── dane/
-            └── example.com/
-                ├── cert.pem@  ->  ../../live/example.com/cert.pem
-                ├── chain.pem@  ->  ../../live/example.com/chain.pem
-                ├── fullchain.pem@  ->  ../../live/example.com/fullchain.pem
-                └── privkey.pem@  ->  ../../live/example.com/privkey.pem
+    ├── alnitak/
+    │   └── dane/
+    │       └── example.com/
+    │           ├── cert.pem@  ->  ../../live/example.com/cert.pem
+    │           ├── chain.pem@  ->  ../../live/example.com/chain.pem
+    │           ├── fullchain.pem@  ->  ../../live/example.com/fullchain.pem
+    │           └── privkey.pem@  ->  ../../live/example.com/privkey.pem
 
 Every service that then implements DANE with the help of *Alnitak* should then substitute certificates `/etc/letsencrypt/live/DOMAIN/X.pem` with `/etc/alnitak/dane/DOMAIN/X.pem`.
 
@@ -313,20 +313,20 @@ Do not print messages to stdout or stderr during the execution of the program. T
 
 By default, the program will log information to the file `/var/log/alnitak.log` (which can be changed via the `--log` flag). The following combination of flags provide a guide as to how the program will print errors and information, and where to. You will likely only ever need a few of these scenarios, but they are all listed for the sake of completion.
 
-|     flags     |     errors      |  info   |
-|:--------------|:---------------:|:-------:|
-|<none>         | logfile, stderr | logfile |
-|`-l-`          | stderr          | stdout  |
-|`-lno`         | stderr          | -       |
-|`-q`           | logfile         | logfile |
-|`-l- -q`       | -               | -       |
-|`-lno -q`      | -               | -       |
-|`-Lno`         | logfile, stderr | -       |
-|`-l- -Lno`     | stderr          | -       |
-|`-lno -Lno`    | stderr          | -       |
-|`-q -Lno`      | logfile         | -       |
-|`-l- -q -Lno`  | -               | -       |
-|`-lno -q -Lno` | -               | -       |
+|     flags       |     errors      |  info   |
+| :-------------- | :-------------: | :-----: |
+|                 | logfile, stderr | logfile |
+| `-l-`           | stderr          | stdout  |
+| `-lno`          | stderr          | -       |
+| `-q`            | logfile         | logfile |
+| `-l- -q`        | -               | -       |
+| `-lno -q`       | -               | -       |
+| `-Lno`          | logfile, stderr | -       |
+| `-l- -Lno`      | stderr          | -       |
+| `-lno -Lno`     | stderr          | -       |
+| `-q -Lno`       | logfile         | -       |
+| `-l- -q -Lno`   | -               | -       |
+| `-lno -q -Lno`  | -               | -       |
 
 As a general rule of thumb: by default, all messages (info or errors) are written to the logfile, with the error messages also written to stderr. If you want to write to stdout rather than to the logfile, then pass the `-l-` (`--log=stdout`) flag. If you want to only ever write to the logfile, then pass the `-q` flag. If you want to suppress all info output, pass the `-Lno` flag.
 
