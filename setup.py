@@ -30,7 +30,7 @@ setup(
     author='K. S. Kooner',
     author_email='ksa.kooner@gmail.com',
     license='MIT',
-    url='git remote add origin https://github.com/definitelyprobably/alnitak.git',
+    url='git remote add origin https://github.com/definitelyprobably/alnitak',
     description='Create and manage DANE (DNS TLSA) records',
     long_description=long_description,
     keywords="dane tlsa",
