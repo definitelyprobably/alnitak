@@ -148,7 +148,7 @@ def publish(prog, api, tlsa, hash):
                                                                 tlsa.pstr()))
     prog.log.info3("    - program: {}".format(api.rstr()))
     environ = { "PATH":
-                "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin",
+                "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
                 "IFS": " \t\n",
                 "TLSA_PARAM": "{}{}{}".format(
                                 tlsa.usage, tlsa.selector, tlsa.matching),

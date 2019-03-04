@@ -2,6 +2,11 @@
  Alnitak Changelog
 ===================
 
+0.1.6
+=====
+
+* PATH parameter that is set if calling the binary API scheme fixed.
+
 0.1.5
 =====
 

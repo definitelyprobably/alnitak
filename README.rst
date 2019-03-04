@@ -22,7 +22,7 @@ The Solution
 
 Since Let's Encrypt certificates are typically renewed well before they expire, even after a certificate is renewed the previous certificates are still valid. The solution to the above problem is therefore quite simple: continue to use the old certificate until the TLSA records for the new certificate are published, and only then have your service use the new certificate. This will work because as long as there exists one TLSA record that matches the certificate being offered, authentication will succeed: the existence of other TLSA records that do not match is not taken as an authentication failure as long as at least one record matches.
 
-Operationally, however, this involves a little bit of work on the server to implement. There is where *Alnitak* can help.
+Operationally, however, this involves a little bit of work on the server to implement. This is where *Alnitak* can help.
 
 How Alnitak Works
 =================
@@ -30,18 +30,18 @@ How Alnitak Works
 The Initial Setup
 *****************
 
-Back to the example above, suppose we are running a mail server at ``smtp.example.com`` on port 25 (or a web server at ``www.example.com`` on port 443, or...). Let's Encrypt is installed to provide "live certificates" in ``/etc/letsencrypt/live/example.com/``, which are symbolic links to the actual "archive certificates" in ``/etc/letsencrypt/archive/example.com/``. The Mail Transfer Agent that is listening on port 25 (postfix, exim, sendmail,...) will usually be configured to use the certificates in the "live directory". For example, for postfix::
+Back to the example above, suppose we are running a mail server at ``smtp.example.com`` on port 25 (or a web server at ``www.example.com`` on port 443, or...). Let's Encrypt is installed to provide "live certificates" in ``/etc/letsencrypt/live/example.com/``, which are symbolic links to the actual "archive certificates" in ``/etc/letsencrypt/archive/example.com/``. The Mail Transfer Agent that is listening on port 25 (postfix, exim, sendmail,...) will usually be configured to use the certificates in the live directory. For example, for postfix::
 
     # /etc/postfix/main.cf
     smtpd_tls_cert_file = /etc/letsencrypt/live/example.com/fullchain.pem
     smtpd_tls_key_file = /etc/letsencrypt/live/example.com/privkey.pem
 
-Note that in this example, the service is running on ``smtp.example.com`` but the certificate is located in ``/etc/letsencrypt/live/example.com/``. This would be the case if you created a multi-domain or wildcard certificate. If a specific certificate for the ``smtp.example.com`` subdomain was created, it would be located in ``/etc/letsencrypt/live/smtp.example.com/``. Either way will work fine in everything that follows.
+Note that in this example, the service is running on ``smtp.example.com`` but the certificate is located in ``/etc/letsencrypt/live/example.com/``. This would be the case if you created a multi-domain or wildcard certificate. If a specific certificate for the ``smtp.example.com`` subdomain was created, it would be located in ``/etc/letsencrypt/live/smtp.example.com/``. Either setup will work fine in everything that follows.
 
 Alnitak
 *******
 
-When *Alnitak* is first run it will create a new "dane directory" ``/etc/alnitak/dane/``, which will imitate the structure of the Let's Encrypt "live directory". In other words, for every directory in ``/etc/letsencrypt/live/``, there will be created an identically named directory in ``/etc/alnitak/dane/``. Inside every such directory there will be created symbolic links named identically to the symbolic links in the "live directory", but instead of pointing to "archive certificates", these symbolic links will point to the live certificate symbolic links.
+When *Alnitak* is first run it will create a new "dane directory" ``/etc/alnitak/dane/``, which will imitate the structure of the Let's Encrypt live directory. In other words, for every directory in ``/etc/letsencrypt/live/``, there will be created an identically named directory in ``/etc/alnitak/dane/``, and inside every such directory there will be created symbolic links named identically to the symbolic links in the live directory, but instead of pointing to archive certificates, these symbolic links will point to the live certificate symbolic links.
 
 With the example above, your filesystem will look like this::
 
@@ -73,12 +73,13 @@ Every service that then implements DANE with the help of *Alnitak* should then s
 The master configuration file for *Alnitak* should then be edited to::
 
     # /etc/alntitak.conf
+    #
     [example.com]
-    #      <params>  <port>  [protcol]  [domain]
     tlsa = 211       25                 smtp.example.com
     tlsa = 301       25                 smtp.example.com
+    #      <params>  <port>  [protcol]  [domain]
 
-Such an entry is called a "target", and consists of a section head containing the domain name that is the directory that the certificates are located in, followed by what TLSA records should be created when the certificates in that directory are renewed. Here, two TLSA records would be created::
+Such an (ini-like) entry is called a "target", and consists of a section head containing the domain name that is the directory that the certificates are located in, followed by what TLSA records should be created when the certificates in that directory are renewed. Here, two TLSA records would be created::
 
     TLSA  2 1 1  _25._tcp.smtp.example.com
     TLSA  3 0 1  _25._tcp.smtp.example.com
@@ -90,32 +91,42 @@ In addition to targets, the master configuration file also needs to know how to 
 Certificate Renewal
 *******************
 
-With the setup as above, this is what will happen when a certificate is renewed:
-
-1. First, *Alnitak* will resolve the symbolic links in the "dane directory" so that instead of pointing to live certificates, they will point to the actual archive certificate. This produces no effect on the services using this dane certificate since whether it points to the live certificate or the archive certificate, they are functionally the same file.
-2. Let's Encrypt performs a scheduled update and any certificates that are renewed have their domain added to the environment parameter ``RENEWED_DOMAINS``.
-3. *Alnitak* will then look for this environment parameter, and for every renewed domain publish a new TLSA record. Every domain that is not renewed has their dane directory symbolic links changed back to the live certificate symbolic links (so the situation is the same as it was before).
-4. After a set period of time, *Alnitak* will check to see if the TLSA records published in step 3 are up. If so, *Alnitak* will delete any old TLSA records and move the dane certificate symbolic links to point back to the live certificates (so, they will now be pointing to the renewed certificates).
-
-Let's Encrypt attempts to updates certificates twice daily (by default) via a cron job or a systemd timer. We simply need to amend this operation. By design, *Alnitak* is intended to run on the certbot pre- and post-hooks as::
+With the setup as above, the Let's Encrypt renewal process needs to be amended so that if a certificate is renewed, it is not immediately available to services until its TLSA record has been published. Let's Encrypt attempts to update certificates twice daily (by default) via a cron job or a systemd timer. We simply need to amend this operation. By design, *Alnitak* is intended to run on the certbot pre- and post-hooks as::
 
     $ certbot renew --pre-hook "alnitak --pre" --post-hook "alnitak --post"
 
-When the *Alnitak* commands is run as::
+This is so that whatever witchcraft is being used to renew certificates, the effort required to configure a transition to a system managed by *Alnitak* will be minimized. For most systems, this will amount to editing the configuration files in ``/etc/letsencrypt/renewal/`` and adding the lines::
 
-    $ alnitak --pre
+    [renewalparams]
+    pre_hook = alnitak --pre
+    post_hook = alnitak --post
 
-it will perform step 1, as above. When run as::
+And no other changes to the Let's Encrypt system files needs to be made. If your system has some exotic configuration for which the above is not feasible, you simply need to ensure that ``alnitak --pre`` is run before every certificate renewal attempt, and that ``alnitak --post`` is run after every attempt (also ensuring that the environment parameter ``RENEWED_DOMAINS`` is properly set).
 
-    $ alnitak --post
+In addition to the above amendments to the Let's Encrypt renewal process, you must also create a separate cron job or systemd timer that runs *Alnitak* itself directly. For example, with cron::
 
-it will perform step 3, as above.
+    # crontab
+    #
+    # m h  dom mon dow   command
+    0   3  *   *   *     /usr/local/bin/alnitak
+    0   15 *   *   *     /usr/local/bin/alnitak
 
-In order to perform step 4, the user simply needs to run the program (without any flags) at any point::
+Running the *Alnitak* program on the Let's Encrypt pre- and post-hook commands will ensure that services continue using the old certificate until a TLSA record is up; this cron job that calls *Alnitak* directly will ensure that the service then switches to the new certificate *if* the TLSA record has indeed been published.
 
-    $ alnitak
+This job can be run as often or as seldom as you would like, but it is recommended that it be at least run daily: if no renewals have been made, then *Alnitak* will simply do nothing when run (except log that it has been run), and even when a renewal has been made *Alnitak* will do nothing until at least a minimum period of time has elapsed (see the ``ttl`` flag in `Miscellaneous Commands`_). The consequence being that *Alnitak* can be run as often as you like and whenever you like: it will always do the right thing at the right time, you just need to ensure that you actually call it -- that is what the cron job above is for.
 
-When run like this, it will know if any TLSA records have been published recently and any dane certificates still need to be processed (moved back to pointing to live certificates). *Alnitak* can be run at any time and however many times you wish in order to do this: it has an internal time-to-live value before which it will not do any dane certificate processing. Thus, even if you call *Alnitak* straight away after a renewal it will not do any processing until at least this time-to-live value has passed in order to give the DNS some time to publish and promulgate the new records. (By default, this time-to-live value is 86400 seconds, but can be changed via a ``--ttl`` flag.)
+Renewal Procedure
++++++++++++++++++
+
+With the above setup, this is an overview of what will happen when a certificate is renewed:
+
+1. First, *Alnitak* will resolve the symbolic links in the "dane directory" so that instead of pointing to live certificates, they will point to the actual archive certificate. This produces no effect on the services using this dane certificate since whether it points to the live certificate or the archive certificate, they are functionally the same file.
+2. Let's Encrypt performs a scheduled update and any certificates that are renewed have their domain added to the environment parameter ``RENEWED_DOMAINS``.
+3. *Alnitak* will then look for this environment parameter, and for every renewed domain it leave the changes that were made in step 2 as they are and publish a new TLSA record. Every domain that is not renewed has their dane certificate symbolic links changed back to pointing to live certificates (so the situation is the same as it was before step 1 for these domains).
+4. After a set period of time, *Alnitak* will check to see if the TLSA records published in step 3 are up. If so, *Alnitak* will delete any old TLSA records and move the dane certificate symbolic links back to pointing to live certificates (so, they will now be pointing to the renewed certificates).
+
+At any point in time, a dane certificate (``/etc/alnitak/dane/example.com/X.pem``) is always available that is both extant and has a TLSA record that is up. Furthermore, this dane certificate will be renewed automatically. This means that services simply need to use these dane certificates and *Alnitak* and Let's Encrypt will handle the details or renewals and publishing TLSA records in the background.
+
 
 Installation
 ============
@@ -152,20 +163,20 @@ Installation
 Tests
 *****
 
-You should first enter "development mode" (see above) before running the tests, or else some tests will fail. To run the tests, run::
+You should first enter "development mode" (see above) before running the tests, or else some tests will fail. To run the tests, call::
 
     $ python setup.py test
 
-Note that although *Alnitak* needs root permissions to run, running the tests does not, even though the tests simulate runs of the program. Neither does the testing require any Let's Encrypt files to be present on the system. Finally, The tests do not write to any system files, so they should be safe to run.
+Note that although *Alnitak* needs root permissions to run, running the tests does not, even though the tests simulate runs of the program. Neither do the tests require any Let's Encrypt files to be present on the system; the tests do not make any changes to the external system at all, so the tests should be absolutely safe to run.
 
 Running Alnitak
 ***************
 
-After installation, create a config file at ``/etc/alnitak.conf`` and add targets and API scheme(s) (a sample configuration file is included in the package). Then run the following command to initialize the dane directory and also check the config file for errors::
+After installation, create a config file at ``/etc/alnitak.conf`` and add targets and API scheme(s) (a sample configuration file is included in the package). Then run the following command to initialize the dane directory (it will also check the config file for errors)::
 
-    $ alnitak --reset --config-test
+    $ alnitak --reset
 
-The program is now ready to use. You can add the program to the certbot pre- and post-hooks by editing the configuration files in ``/etc/letsencrypt/renewal/`` by adding the lines::
+The program is now ready to use. You can add the program to the certbot pre- and post-hooks by editing the configuration files in ``/etc/letsencrypt/renewal/`` and adding the lines::
 
     [renewalparams]
     pre_hook = alnitak --pre
@@ -235,9 +246,11 @@ External Program
 
 To call an external program to create or delete TLSA records, use::
 
-    api = binary COMMAND FLAGS...
+    api = binary [uid:UID] COMMAND FLAGS...
 
-which will call *COMMAND* as needed. Any flags specified here will be passed on to the command and quoting of inputs is respected. The external program must be able to create and delete TLSA records, and should distinguish between these two operations by reading the environment for a parameter called ``TLSA_OPERATION``:
+Then, *Alnitak* will call ``COMMAND FLAGS...`` as needed when creating/deleting TLSA records. Any flags specified here will be passed on to the command when both creating and deleting records and quoting of inputs is respected. By default, ``COMMAND`` will be called with root permissions (since this program may need to read API login details from another file, so it might need sufficient permissions to do that etc.), but you can drop privileges to user ID ``UID`` if you specify ``uid:UID`` as the first input to the binary scheme (as indicated above). The ``UID`` input may be either a user name or number, and must exist on your system.
+
+The external program must be able to create and delete TLSA records, and should distinguish between these two operations by reading the environment for a parameter called ``TLSA_OPERATION``:
 
 publishing records
 ------------------
@@ -259,8 +272,8 @@ The environment parameter ``TLSA_OPERATION`` will be set to the value "delete". 
 
 Whether creating or deleting DNS records, the environment will also have set the parameters:
 
-* ``PATH``: set to "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
-* ``IFS``: set to " \t\n"
+* ``PATH``: set to ``"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"``
+* ``IFS``: set to ``" \t\n"``
 * ``TLSA_USAGE``: set to the "usage field" of the TLSA record parameters.
 * ``TLSA_SELECTOR``: set to the "selector field" of the TLSA record parameters.
 * ``TLSA_MATCHING``: set to the "matching-type field" of the TLSA record parameters.
@@ -394,8 +407,6 @@ This program can manage Cloudflare DNS zones since that is what I am using. If y
 
 Licence
 =======
-
-This code is beta software. Use at your own risk.
 
 MIT License
 
