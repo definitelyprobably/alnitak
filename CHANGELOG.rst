@@ -2,6 +2,12 @@
  Alnitak Changelog
 ===================
 
+0.1.7
+=====
+
+* Fixed bug whereby a non-directory in the live directory would make a dane
+  directory named after that file and then cause the program to fail.
+
 0.1.6
 =====
 

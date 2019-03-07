@@ -519,6 +519,11 @@ J8nV2gnPMIAaz0EVKPwmTA==
         self.renew_c_at = 1
 
 
+        with open(str(self.live / 'taint'), 'w') as file:
+            file.write("0")
+
+        with open(str(self.archive / 'taint'), 'w') as file:
+            file.write("0")
 
         for d in self.domains:
             live_d = self.domains[d]['live']
@@ -526,6 +531,9 @@ J8nV2gnPMIAaz0EVKPwmTA==
 
             live_d.mkdir()
             archive_d.mkdir()
+
+            with open(str(live_d / 'taint'), 'w') as file:
+                file.write("1")
 
             with open(str(archive_d / 'cert1.pem'), 'w') as file:
                 file.write(self.domains[d]['cert1'])

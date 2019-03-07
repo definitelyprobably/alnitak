@@ -44,7 +44,8 @@ def init_dane_directory(prog):
                                                         prog.dane_directory))
 
     # create dane directory if it doesn't exist. We'll restrict the
-    # permissions of this file to 700 like the letsencrypt directories do.
+    # permissions of this directory to 700, following the letsencrypt
+    # directories.
     try:
         prog.dane_directory.mkdir(mode=0o700, parents=True)
     except FileExistsError as ex:
@@ -95,9 +96,10 @@ def init_dane_directory(prog):
     prog.log.info3("  + domain directories in the live direcory '{}':".format(
                                             prog.letsencrypt_live_directory))
     try:
-        live_domains = [ pathlib.Path(prog.letsencrypt_live_directory / f)
-                            for f in os.listdir(
-                                        str(prog.letsencrypt_live_directory)) ]
+        live_domains = [
+                pathlib.Path(prog.letsencrypt_live_directory / f.name)
+                    for f in os.scandir(str(prog.letsencrypt_live_directory))
+                    if f.is_dir() ]
     except OSError as ex:
         prog.log.error(
                 "letsencrypt live directory '{}': {}".format(
