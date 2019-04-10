@@ -5,15 +5,48 @@ import re
 import argparse
 import pathlib
 import logging
+from importlib import import_module
 
 from alnitak import prog as Prog
 from alnitak import exceptions as Except
-from alnitak.api import cloudflare4
-from alnitak.api import binary
 from alnitak import certop
 from alnitak import config
 from alnitak import datafile
+from alnitak import printrecord
 
+
+
+def check_modules(prog):
+    """Check if the native API modules are installed for the given API scheme.
+
+    This function will try to import the native python API libraries for
+    relvent API schemes (that are also specified in the config file). If not
+    present, we will fall back to using the HTTP RESTful API.
+
+    Args:
+        prog (State): program internal state. Note that prog.data is empty
+            at this point, the targets read from the config file are still
+            in prog.target_list right after the config file has been read.
+
+    Returns:
+        RetVal: always returns 'RetVal.ok'.
+    """
+    prog.log.info3("+++ checking API modules are loaded")
+
+    apis = { t.api for t in prog.target_list }
+    for a in apis:
+        prog.log.info3(" ++ {}".format(a.type))
+
+    for a in apis:
+        if a.type == Prog.ApiType.cloudflare:
+            try:
+                from CloudFlare import CloudFlare
+                a.cloudflare = CloudFlare(email=a.email, token=a.key)
+                prog.log.info3("  + native API module installed")
+            except ModuleNotFoundError:
+                prog.log.info3("  + native API module not installed")
+
+    return Prog.RetVal.ok
 
 
 def init_dane_directory(prog):
@@ -149,8 +182,8 @@ def init_dane_directory(prog):
         prog.log.info3(
             "  + creating symlinks to live domain symlinks...".format(dane_d))
         try:
-            link_list = [ f for f in os.listdir(str(d))
-                                        if pathlib.Path(d / f).is_symlink() ]
+            link_list = [ f.name for f in os.scandir(str(d))
+                                        if f.is_symlink() and f.is_file() ]
         except OSError as ex:
             prog.log.error(
                     "letsencrypt (live) domain directory '{}': {}".format(
@@ -496,10 +529,15 @@ def delete_dane_if_up(prog, api, tlsa, hash1, hash2 = None):
     """
     prog.log.info1(
             "+++ attempting to delete TLSA DNS record: {}".format(tlsa.pstr()))
-    if api.type == Prog.ApiType.cloudflare4:
 
+    if api.type == Prog.ApiType.binary:
+        from alnitak.api.binary import api_delete
+        api_delete(prog, api, tlsa, hash1, hash2)
+    else:
+        apimod = import_module('alnitak.api.' + api.type.value)
+        
         # get a dict of all the records up
-        records = cloudflare4.read(prog, api, tlsa)
+        records = apimod.api_read(prog, api, tlsa)
 
         # if we need to check if hash2 is up, then do that now
         if hash2:
@@ -513,13 +551,11 @@ def delete_dane_if_up(prog, api, tlsa, hash1, hash2 = None):
         # record
         for r in records:
             if r == hash1:
-                cloudflare4.delete(prog, api, tlsa, records[r])
+                apimod.api_delete(prog, api, tlsa, records[r])
                 break
         else:
             raise Except.DNSNotLive("TLSA record not up yet")
 
-    else:
-        binary.delete(prog, api, tlsa, hash1, hash2)
 
 
 def process_data_prehook(prog, group):
@@ -616,11 +652,12 @@ def process_data_posthook_not_renewed(prog, group):
 
 
                 # get cert hash
-                cert = certop.get_archive(l.tlsa, group.pre)
+                cert = certop.get_archive(l.tlsa.usage,
+                                        [ l.cert.archive for l in group.pre ])
                 prog.log.info2(
                         "  + old hash: going to use cert '{}'".format(cert))
 
-                cert_data = certop.read_cert(cert, l.tlsa)
+                cert_data = certop.read_cert(cert, l.tlsa.usage)
                 hash = certop.get_hash( l.tlsa.selector, l.tlsa.matching,
                                              cert_data)
                 prog.log.info2("  + old {}{}{} hash: {}".format(
@@ -641,10 +678,9 @@ def process_data_posthook_not_renewed(prog, group):
             # retry publishing record
             prog.log.info1(" ++ pending state is 1: will retry publishing TLSA DNS record {}".format(l.tlsa.pstr()))
             try:
-                if group.target.api.type == Prog.ApiType.cloudflare4:
-                    cloudflare4.publish(prog, group.target.api, l.tlsa, l.hash)
-                else:
-                    binary.publish(prog, group.target.api, l.tlsa, l.hash)
+                apimod = import_module('alnitak.api.'
+                                                + group.target.api.type.value)
+                apimod.api_publish(prog, group.target.api, l.tlsa, l.hash)
 
                 prog.log.info2("  + record published successfully")
 
@@ -713,10 +749,12 @@ def process_data_posthook_renewed(prog, group):
             # hash as the previously renewed certificate, we neither want to
             # bother deleting the hash nor bother publishing that hash again
             # in 'process_data_prehook'.
-            cert = certop.get_live(l.tlsa, group.pre)
+            cert = certop.get_live(l.tlsa.usage,
+                                            [ l.cert.live for l in group.pre ])
             prog.log.info2("  + going to use cert '{}'".format(cert))
 
-            cert_data = certop.read_cert(cert, l.tlsa)
+            cert_data = certop.read_cert(cert, l.tlsa.usage)
+            # FIXME: can throw!!
 
             hash = certop.get_hash(l.tlsa.selector, l.tlsa.matching, cert_data)
 
@@ -823,10 +861,11 @@ def publish_dane(prog, group):
                                                                   tlsa.pstr()))
         pending = '0'
         try:
-            cert = certop.get_live(tlsa, group.pre)
+            cert = certop.get_live(tlsa.usage,
+                                            [ l.cert.live for l in group.pre ])
             prog.log.info2("  + going to use cert '{}'".format(cert))
 
-            cert_input = certop.read_cert(cert, tlsa)
+            cert_input = certop.read_cert(cert, tlsa.usage)
 
             hash = certop.get_hash(tlsa.selector, tlsa.matching,
                                         cert_input)
@@ -835,10 +874,8 @@ def publish_dane(prog, group):
                             tlsa.usage, tlsa.selector, tlsa.matching, hash))
 
             # now need to use the Api object to publish a TLSA record
-            if group.target.api.type == Prog.ApiType.cloudflare4:
-                cloudflare4.publish(prog, group.target.api, tlsa, hash)
-            else:
-                binary.publish(prog, group.target.api, tlsa, hash)
+            apimod = import_module('alnitak.api.' + group.target.api.type.value)
+            apimod.api_publish(prog, group.target.api, tlsa, hash)
 
         except Except.DNSSkip as ex:
             # e.g. this is likely to happen for DANE-TA(2) records, whose
@@ -893,6 +930,7 @@ def archive_to_live(prog, group):
         prog.log.info3("    => {} (state: {})".format(l.cert.live, l.state))
 
     return errors
+
 
 # TODO: use me? use me!
 def create_symlink(prog, symlink, to):
@@ -964,11 +1002,6 @@ def relative_to(path, target):
 
 
 
-
-
-
-
-
 def main():
     """Alnitak program entry function."""
 
@@ -990,6 +1023,12 @@ certificates are renewed.""",
 
     mode = parser.add_mutually_exclusive_group()
 
+    mode.add_argument("-p", "--print",
+            help="print TLSA certificate data (hashes) and exit. Without arguments, print the hashes for the TLSA records in the config file; with arguments, print data only for the specified records. With arguments, the input should be in the format 'XYZ:CERT', where X is the TLSA usage (2 or 3 only), Y is the selector (0 or 1), Z is the matching type (0, 1 or 2) and CERT should either be the relevant X.509 certificate, or else the Let's Encrypt domain the certificate is to be found in (i.e., e.g., 'example.com').",
+            action="append",
+            type=printrecord.arg_type,
+            nargs="*")
+
     mode.add_argument("-t", "--config-test",
             help="test the config file for errors",
             action='store_true')
@@ -998,18 +1037,26 @@ certificates are renewed.""",
             help="run in pre-hook mode, to be run on the Let's Encrypt pre-hook function",
             action='store_true')
 
+    mode.add_argument("--deploy",
+            help="synonym for the '--post' flag",
+            action='store_true')
+
     mode.add_argument("--post",
-            help="run in post-hook mode, to be run on the Let's Encrypt post-hook function",
+            help="run in post-hook mode, to be run on the Let's Encrypt post-hook/deploy-hook function",
+            action='store_true')
+
+    mode.add_argument("--init",
+            help="synonym for the '--reset' flag",
             action='store_true')
 
     mode.add_argument("--reset",
             help="recreate the symlinks in the dane directory",
             action='store_true')
 
-    parser.add_argument("--dane-directory",
+    parser.add_argument("--dane-directory", "-D",
             help="directory containing the DANE certificates")
 
-    parser.add_argument("--letsencrypt-directory",
+    parser.add_argument("--letsencrypt-directory", "-C",
             help="directory containing the Let's Encrypt certificates")
 
     parser.add_argument("--ttl",
@@ -1029,7 +1076,6 @@ certificates are renewed.""",
 
     parser.add_argument("-c", "--config",
             help="read the specified config file")
-
 
     args = parser.parse_args()
     exec_list = None
@@ -1079,25 +1125,33 @@ certificates are renewed.""",
         prog.set_config_file(args.config)
 
 
-    if args.config_test:
-        exec_list = [ config.read ]
+    if args.print:
+        if [ b for a in args.print for b in a ]:
+            exec_list = [ printrecord.populate_targets,
+                          printrecord.certificate_data ]
+        else:
+            exec_list = [ config.read, printrecord.certificate_data ]
 
-    if args.reset:
+    if args.config_test:
+        exec_list = [ config.read, check_modules ]
+
+    if args.reset or args.init:
         prog.recreate_dane = True
-        exec_list = [ config.read, init_dane_directory, datafile.remove ]
+        exec_list = [ config.read, check_modules, init_dane_directory,
+                      datafile.remove ]
 
     if args.pre:
-        exec_list = [ config.read, init_dane_directory, live_to_archive,
-                      datafile.write_prehook ]
+        exec_list = [ config.read, check_modules, init_dane_directory,
+                      live_to_archive, datafile.write_prehook ]
 
-    if args.post:
-        exec_list = [ config.read, set_renewed_domains, datafile.read,
-                      datafile.check_data, process_data,
+    if args.post or args.deploy:
+        exec_list = [ config.read, check_modules, set_renewed_domains,
+                      datafile.read, datafile.check_data, process_data,
                       datafile.write_posthook ]
 
     if not exec_list:
-        exec_list = [ config.read, set_renewed_domains, datafile.read,
-                      datafile.check_data, process_data,
+        exec_list = [ config.read, check_modules, set_renewed_domains,
+                      datafile.read, datafile.check_data, process_data,
                       datafile.write_posthook ]
 
 
@@ -1119,22 +1173,6 @@ certificates are renewed.""",
 
     # next initialize logging
     prog.init_logging(args)
-
-
-    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-    #                       ENTRY FUNCTIONS                             #
-    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-    #            PRE                                POST
-    #    [1]  read_config                   [1]  read_config
-    #    [2]  init_dane_directory           [3]  set_renewed_domains
-    #    [6]  live_to_archive               [4]  read_datafile
-    #    [8]  write_prehook_datafile        [5]  check_data
-    #                                       [7]  process_data
-    #           RESET                       [9]  write_posthook_datafile
-    #    [1]  read_config
-    #    [2]  init_dane_directory                   TEST
-    #    [10] remove_datafile               [1]  read_config
 
 
     # then run the rest of the code

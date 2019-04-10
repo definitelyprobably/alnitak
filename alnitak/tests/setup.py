@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def create_api_c4_obj(zone, email, key):
-    a = Prog.ApiCloudflare4()
+    a = Prog.ApiCloudflare()
     a.zone = zone
     a.email = email
     a.key = key
@@ -255,7 +255,8 @@ eBPls0nRUjHS55nGaPZEhMI4J/9xUMDRn+wOMZHXisHgHPU/6MfiONDobVNxL4E+
 h0+47d7xJfWNZmFPm/8Nk36J2R0mevY1ERLw5+sLPGnwJnGCLSG5mLsNBQtSvSTa
 ixYV/T1qkcsoDoJTEnkclHskXDY9rN6iJvhMlV6cdR8QWYFH3vc5OPrIKHf+1x+x
 zKOVPpVoRmQefxXd/ro/gHLoZO89YhzmjfYkQgjb9akbFvGLAHMX9IsGoMcqHWGZ
------END CERTIFICATE-----''' },
+-----END CERTIFICATE-----
+''' },
                          'b.com': { 'live': self.live / 'b.com',
                                     'archive': self.archive / 'b.com',
                                     'dane': self.dane / 'b.com',
@@ -808,7 +809,7 @@ exit 10
             tlsa \t=\t 211 12725
             tlsa\t=\t301 12725
             tlsa   =\t\t\t311 12725
-            api = cloudflare4 zone:2 email:A@domain.com key:1
+            api = cloudflare zone:2 email:A@domain.com key:1
             api = binary bin --flag1 input "input with\t whitespace"
 
             \t[ b.com ]
@@ -820,7 +821,7 @@ exit 10
             tlsa \t =\t \t212 A.com sctp 1
             tlsa \t =\t \t212 udp B.com 1
             api = binary X
-            api = cloudflare4 zone:ZONE email:me@domain.com key:KEY
+            api = cloudflare zone:ZONE email:me@domain.com key:KEY
             
             [c.com ]
             tlsa=200 2

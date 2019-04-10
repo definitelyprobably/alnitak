@@ -28,6 +28,8 @@ class State:
         name (str): name of the program.
         version (str): program version.
         copyright (str): copyright message.
+        apis (list(str)): list of recognized API schemes, used by the
+            config code to import entry points.
         tlsa_parameters_regex (str): regex that specifies a valid TLSA
             parameter.
         tlsa_domain_regex (str): regex that specifies a valid TLSA domain
@@ -81,6 +83,7 @@ class State:
         self.name = "alnitak"
         self.version = alnitak.__version__
         self.copyright = "copyright (c) K. S. Kooner, 2019, MIT License"
+        self.apis = [ 'binary', 'cloudflare' ]
         self.tlsa_parameters_regex = r"[23][01][012]"
         self.tlsa_domain_regex = r"((\w[a-zA-Z0-9-]*\w|\w+)\.)+\w+"
         self.tlsa_protocol_regex = r"\w+"
@@ -557,17 +560,24 @@ class Api:
     def __eq__(self, a):
         return self.type == a.type
 
-class ApiCloudflare4(Api):
-    """The Cloudflare4 API scheme.
+    def __hash__(self):
+        return hash(self.type)
+
+class ApiCloudflare(Api):
+    """The Cloudflare API scheme.
 
     Attributes:
+        cloudflare (CloudFlare): an instance of the CloudFlare class. This
+            will usually be instantiated after the corresponding module has
+            been checked if it will load ok.
         zone (str): the Cloudflare zone.
         email (str): the email of the user to login as.
         key (str): the key of the user to login with.
     """
 
     def __init__(self):
-        super().__init__(ApiType.cloudflare4)
+        super().__init__(ApiType.cloudflare)
+        self.cloudflare = None
         self.zone = None
         self.email = None
         self.key = None
@@ -578,6 +588,9 @@ class ApiCloudflare4(Api):
     def __eq__(self, a):
         return (self.type == a.type and self.zone == a.zone
                 and self.email == a.email and self.key == a.key)
+
+    def __hash__(self):
+        return super().__hash__()
 
 class ApiBinary(Api):
     """The 'binary' API scheme
@@ -606,12 +619,39 @@ class ApiBinary(Api):
         return (self.type == a.type and self.command == a.command
                 and self.uid == a.uid and self.gid == a.gid)
 
+    def __hash__(self):
+        return super().__hash__()
+
 
 class ApiType(Enum):
     """The API scheme."""
-    cloudflare4 = 0
-    binary = 1
+    binary = 'binary'
+    cloudflare = 'cloudflare'
 
+
+
+class Record:
+    """Class to record the inputs to the '--print' flag.
+
+    Attributes:
+        params (str): concatenation of the tlsa usage, selector and matching
+            type fields. E.g. "311", "202", etc.
+        cert (str): either a X.509 certificate file, or else a Let's Encrypt
+            domain where the certificate is to be located in.
+    """
+
+    def __init__(self, params, cert):
+        self.params = params
+        self.cert = cert
+
+    def __eq__(self, r):
+        return (self.params == r.params and self.cert == r.cert)
+
+    def __hash__(self):
+        return hash(self.params + self.cert)
+
+    def __str__(self):
+        return "  params: {}\n  cert: {}".format(self.params, self.cert)
 
 
 class Tlsa:
@@ -646,6 +686,9 @@ class Tlsa:
                     and self.matching == t.matching and self.port == t.port
                     and self.protocol == t.protocol
                     and self.domain == t.domain and self.publish == t.publish )
+
+    def params(self):
+        return "{}{}{}".format(self.usage, self.selector, self.matching)
 
     def __str__(self):
         return "    - tlsa: {}{}{} {} {} {} [state:{}]".format(

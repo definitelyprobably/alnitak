@@ -9,9 +9,9 @@ from cryptography.hazmat.primitives import serialization
 from alnitak import exceptions as Except
 
 # Note: python 3.5+ can use X.hex() instead of encode(X,'hex').decode('ascii').
-# If going to change that, then remove the import above.
+# If going to change that, then remove the 'codecs' import above.
 
-def get_live(tlsa, pre):
+def get_live(usage, certs):
     """Return a live certificate name from one of the prehook lines.
 
     Return a name (pathlib.Path) of a live certificate from one of the
@@ -19,8 +19,8 @@ def get_live(tlsa, pre):
     record requested.
 
     Args:
-        tlsa (Tlsa): not changed.
-        pre (DataPre): not changed.
+        usage (str): not changed.
+        certs (list(pathlib.Path)): not changed.
 
     Returns:
         pathlib.Path: taken from 'pre'. If no certificate is found an
@@ -31,19 +31,19 @@ def get_live(tlsa, pre):
             in the domain folder, so there ought to be a certificate for
             whatever DANE record is requested.
     """
-    if tlsa.usage == '2':
+    if usage == '2':
         name_list = [ "chain.pem", "fullchain.pem" ]
     else:
         name_list = [ "cert.pem", "fullchain.pem" ]
 
-    for cert in [ l.cert.live for l in pre ]:
+    for cert in certs:
         if cert.name in name_list:
             return cert
 
     raise Except.InternalError("suitable cert could not be found")
 
 
-def get_archive(tlsa, pre):
+def get_archive(usage, certs):
     """Return an archive certificate name from one of the prehook lines.
 
     Return a name (pathlib.Path) of an archive certificate from one of
@@ -51,8 +51,8 @@ def get_archive(tlsa, pre):
     record requested.
 
     Args:
-        tlsa (Tlsa): not changed.
-        pre (DataPre): not changed.
+        usage (str): not changed.
+        certs (list(pathlib.Path)): not changed.
 
     Returns:
         pathlib.Path: taken from 'pre'. If no certificate is found an
@@ -63,26 +63,60 @@ def get_archive(tlsa, pre):
             in the domain folder, so there ought to be a certificate for
             whatever DANE record is requested.
     """
-    if tlsa.usage == '2':
+    if usage == '2':
         name_regex = r"(full)?chain[0-9]+\.pem"
     else:
         name_regex = r"(cert|fullchain)[0-9]+\.pem"
 
-    for l in pre:
-        if re.match(name_regex, l.cert.archive.name):
-            return l.cert.archive
+    for cert in certs:
+        if re.match(name_regex, cert.name):
+            return cert
 
     raise Except.InternalError("suitable cert could not be found")
 
-def read_cert(cert, tlsa):
+
+def get_xive(usage, certs):
+    """Return a live/archive certificate name from one of the prehook lines.
+
+    Return a name (pathlib.Path) of either an archive or live certificate
+    from one of the prehook lines, the appropriate certificate depending on
+    the DANE record requested.
+
+    Args:
+        usage (str): not changed.
+        certs (list(pathlib.Path)): not changed.
+
+    Returns:
+        pathlib.Path: taken from 'pre'. If no certificate is found an
+            exception is raised.
+
+    Raises:
+        InternalError: there ought to be a prehook line for every pem cert
+            in the domain folder, so there ought to be a certificate for
+            whatever DANE record is requested.
+    """
+    if usage == '2':
+        name_regex = r"(full)?chain[0-9]*\.pem"
+    else:
+        name_regex = r"(cert|fullchain)[0-9]*\.pem"
+
+    for cert in certs:
+        if re.match(name_regex, cert.name):
+            return cert
+
+    raise Except.InternalError("suitable cert could not be found")
+
+
+def read_cert(cert, tlsa_usage):
     """Return the PEM-encoded content of a certificate file.
 
     Open a certificate file and return a str that is the PEM-encoded
     public key info in that file, in the case of a fullchain file, only
-    the necessary key is returned, depending on the DANe record requested.
+    the necessary key is returned, depending on the DANE record requested.
 
     Args:
         cert (pathlib.Path): PEM-encoded file to read.
+        tlsa_usage (str): tlsa usage field
 
     Returns:
         str: PEM-encoded content of 'cert' (with BEGIN and END headers and
@@ -119,7 +153,7 @@ def read_cert(cert, tlsa):
         if temp:
             pems += [ temp ]
 
-        if tlsa.usage == '2':
+        if tlsa_usage == '2':
             if len(pems) < 2:
                 raise Except.DNSProcessingError("creating hash: '{}' file: no intermediate certificate found".format(cert))
             cert_data = pems[1]

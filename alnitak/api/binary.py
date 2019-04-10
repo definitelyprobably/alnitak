@@ -4,6 +4,7 @@ import pwd
 import subprocess
 
 from alnitak import exceptions as Except
+from alnitak import prog as Prog
 
 
 def formalize_string(inp, prepend=""):
@@ -122,7 +123,7 @@ def drop_privs_lambda(api):
 
 
 
-def publish(prog, api, tlsa, hash):
+def api_publish(prog, api, tlsa, hash):
     """Create (publish) a DANE TLSA record.
 
     Args:
@@ -205,7 +206,7 @@ def publish(prog, api, tlsa, hash):
 
 
 
-def delete(prog, api, tlsa, hash1, hash2):
+def api_delete(prog, api, tlsa, hash1, hash2):
     """Delete a DANE TLSA record.
 
     Args:
@@ -289,4 +290,73 @@ def delete(prog, api, tlsa, hash1, hash2):
     if proc.returncode >= 200:
         raise Except.DNSNoReturnError(errmsg)
     raise Except.DNSProcessingError(errmsg)
+
+
+def get_api(prog, input_list, state):
+    """Create an ApiBinary object from a config file line.
+
+    Given an 'api = binary ...' line in a config file, construct
+    and return an ApiBinary object, or else 'None' if an error is
+    encountered.
+
+    Args:
+        prog (State): not changed.
+        input_list (list(str)): a list of whitespace-delimited strings
+            corresponding to the inputs following 'api = binary'
+            (i.e., the 'inputs' of the 'api' parameter, less the first
+            'binary' input).
+        state (ConfigState): class to record config file errors.
+
+    Returns:
+        ApiBinary: creates an ApiBinary object from the arguments.
+        None: if an error is encountered.
+    """
+    if input_list[0][0:4] == "uid:":
+        uid = get_api_uid(prog, input_list[0][4:], state)
+        if uid == None:
+            return None
+        comms = input_list[1:]
+    else:
+        uid = None
+        comms = input_list
+
+    if len(comms) == 0:
+        state.add_error(prog, "'binary' api scheme given no command to run")
+        return None
+
+    return Prog.ApiBinary(comms, uid=uid)
+
+
+def get_api_uid(prog, uid, state):
+    """Extract a UID from the input.
+
+    If the input is an integer, this will just be used. If a username, the
+    UID will be searched for in the passwd file.
+
+    Args:
+        prog (State): not changed.
+        uid (str): the input to the 'uid' flag: this will be 'X' if
+            'uid:X' was found on the config line.
+        state (ConfigState): class to record config file errors.
+
+    Returns:
+        int: the UID value, or else 'None' if an error is found.
+    """
+    if len(uid) == 0:
+        state.add_error(prog, "'binary' api scheme: no uid input given")
+        return None
+
+    try:
+        return int(uid)
+    except ValueError:
+        pass
+
+    try:
+        return pwd.getpwnam(uid).pw_uid
+    except KeyError:
+        pass
+
+    state.add_error(prog, "'binary' api scheme: uid input '{}' not a valid input".format(uid))
+    return None
+
 

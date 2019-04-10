@@ -63,10 +63,10 @@ With the example above, your filesystem will look like this::
     └── alnitak/
         └── dane/
             └── example.com/
-                ├── cert.pem@  ->  ../../live/example.com/cert.pem
-                ├── chain.pem@  ->  ../../live/example.com/chain.pem
-                ├── fullchain.pem@  ->  ../../live/example.com/fullchain.pem
-                └── privkey.pem@  ->  ../../live/example.com/privkey.pem
+                ├── cert.pem@  ->  ../../../letsencrypt/live/example.com/cert.pem
+                ├── chain.pem@  ->  ../../../letsencrypt/live/example.com/chain.pem
+                ├── fullchain.pem@  ->  ../../../letsencrypt/live/example.com/fullchain.pem
+                └── privkey.pem@  ->  ../../../letsencrypt/live/example.com/privkey.pem
 
 Every service that then implements DANE with the help of *Alnitak* should then substitute certificates ``/etc/letsencrypt/live/DOMAIN/X.pem`` with ``/etc/alnitak/dane/DOMAIN/X.pem``.
 
@@ -122,10 +122,10 @@ With the above setup, this is an overview of what will happen when a certificate
 
 1. First, *Alnitak* will resolve the symbolic links in the "dane directory" so that instead of pointing to live certificates, they will point to the actual archive certificate. This produces no effect on the services using this dane certificate since whether it points to the live certificate or the archive certificate, they are functionally the same file.
 2. Let's Encrypt performs a scheduled update and any certificates that are renewed have their domain added to the environment parameter ``RENEWED_DOMAINS``.
-3. *Alnitak* will then look for this environment parameter, and for every renewed domain it leave the changes that were made in step 2 as they are and publish a new TLSA record. Every domain that is not renewed has their dane certificate symbolic links changed back to pointing to live certificates (so the situation is the same as it was before step 1 for these domains).
+3. *Alnitak* will then look for this environment parameter, and for every renewed domain it will leave the changes that were made in step 2 as they are and publish a new TLSA record. Every domain that is not renewed has their dane certificate symbolic links changed back to pointing to live certificates (so the situation is the same as it was before step 1 for these domains).
 4. After a set period of time, *Alnitak* will check to see if the TLSA records published in step 3 are up. If so, *Alnitak* will delete any old TLSA records and move the dane certificate symbolic links back to pointing to live certificates (so, they will now be pointing to the renewed certificates).
 
-At any point in time, a dane certificate (``/etc/alnitak/dane/example.com/X.pem``) is always available that is both extant and has a TLSA record that is up. Furthermore, this dane certificate will be renewed automatically. This means that services simply need to use these dane certificates and *Alnitak* and Let's Encrypt will handle the details or renewals and publishing TLSA records in the background.
+At all times, a dane certificate (``/etc/alnitak/dane/example.com/X.pem``) is always available that is both extant and has a TLSA record that is up. Furthermore, this dane certificate will be renewed automatically. This means that services simply need to use these dane certificates and *Alnitak* and Let's Encrypt will handle the details or renewals and publishing TLSA records in the background.
 
 
 Installation
@@ -246,9 +246,10 @@ External Program
 
 To call an external program to create or delete TLSA records, use::
 
-    api = binary [uid:UID] COMMAND FLAGS...
+    api = binary COMMAND FLAGS...
+    api = binary uid:N COMMAND FLAGS...
 
-Then, *Alnitak* will call ``COMMAND FLAGS...`` as needed when creating/deleting TLSA records. Any flags specified here will be passed on to the command when both creating and deleting records and quoting of inputs is respected. By default, ``COMMAND`` will be called with root permissions (since this program may need to read API login details from another file, so it might need sufficient permissions to do that etc.), but you can drop privileges to user ID ``UID`` if you specify ``uid:UID`` as the first input to the binary scheme (as indicated above). The ``UID`` input may be either a user name or number, and must exist on your system.
+Then, *Alnitak* will call ``COMMAND FLAGS...`` as needed when creating/deleting TLSA records. Any flags specified here will be passed on to the command when both creating and deleting records and quoting of inputs is respected. By default, ``COMMAND`` will be executed by root, but you can drop privileges to user ID ``N`` if you specify ``uid:N`` as the first input to the binary scheme (as indicated above). The uid input ``N`` may be either the system user name or their user ID number; either way they both must exist on your system.
 
 The external program must be able to create and delete TLSA records, and should distinguish between these two operations by reading the environment for a parameter called ``TLSA_OPERATION``:
 

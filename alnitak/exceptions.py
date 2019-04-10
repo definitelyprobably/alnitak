@@ -9,6 +9,11 @@ class LockError(RuntimeError):
     def __init__(self, message=None):
         self.message = message
 
+class FunctionError(RuntimeError):
+    """Generic exception for function throws"""
+    def __init__(self, message=None):
+        self.message = message
+
 class InternalError(RuntimeError):
     """Internal errors."""
     def __init__(self, message=None):
