@@ -200,7 +200,7 @@ def api_publish(prog, api, tlsa, hash):
 
     errmsg = "publishing TLSA record: external program '{}' returned exit code {}".format(api.command[0], proc.returncode)
 
-    if proc.returncode >= 200:
+    if proc.returncode >= 128:
         raise Except.DNSNoReturnError(errmsg)
     raise Except.DNSProcessingError(errmsg)
 
@@ -287,7 +287,7 @@ def api_delete(prog, api, tlsa, hash1, hash2):
 
     errmsg = "deleting TLSA record: external program '{}' returned exit code {}".format(api.command[0], proc.returncode)
 
-    if proc.returncode >= 200:
+    if proc.returncode >= 128:
         raise Except.DNSNoReturnError(errmsg)
     raise Except.DNSProcessingError(errmsg)
 
