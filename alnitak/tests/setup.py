@@ -119,6 +119,8 @@ class Init:
 
         self.data.chmod(0o1777)
 
+        self.readme = self.parent / 'README'
+
         self.config = self.etc  / 'alnitak.conf'
         self.config1 = self.etc / 'alnitak.conf.1'
         self.config2 = self.etc / 'alnitak.conf.2'
@@ -518,6 +520,8 @@ J8nV2gnPMIAaz0EVKPwmTA==
         self.renew_b_at = 1
         self.renew_c_at = 1
 
+        with open(str(self.readme), 'w') as file:
+            file.write('This directory and its contents have been created by the testing scripts. You can safely delete this directory if you wish; the tests will recreate the directory and its contents if it is missing.\n')
 
         with open(str(self.live / 'taint'), 'w') as file:
             file.write("0")
