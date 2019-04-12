@@ -34,7 +34,7 @@ def test_success_config_default():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
 
     t_a1 = setup.create_tlsa_obj('311', '12725', 'tcp', 'a.com')
     t_a2 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
@@ -409,7 +409,7 @@ def test_success_2xx_up_config_default():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
 
     t_a1 = setup.create_tlsa_obj('311', '12725', 'tcp', 'a.com')
     t_a2 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
@@ -818,7 +818,7 @@ def test_hashes():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
 
     t_a200 = setup.create_tlsa_obj('200', '12725', 'tcp', 'a.com')
     t_a201 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
@@ -1158,7 +1158,7 @@ def test_2xx_only():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
 
     t_a1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
     ta = setup.create_target_obj('a.com', api, [], [t_a1])
@@ -1517,7 +1517,7 @@ def test_2xx_only_already_up():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
 
     t_a1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
     ta = setup.create_target_obj('a.com', api, [], [t_a1])
@@ -1704,7 +1704,7 @@ def test_single_renewal_soft_fail():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
 
     t_a1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
     t_a2 = setup.create_tlsa_obj('211', '12725', 'tcp', 'a.com')
@@ -2115,7 +2115,7 @@ def test_single_renewal_2xx_up_soft_fail():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
 
     t_a1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
     t_a2 = setup.create_tlsa_obj('211', '12725', 'tcp', 'a.com')
@@ -2493,7 +2493,7 @@ def test_single_renewal_2xx_delayed_up_soft_fail():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
 
     t_a1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
     t_a2 = setup.create_tlsa_obj('211', '12725', 'tcp', 'a.com')
@@ -2879,7 +2879,7 @@ def test_multi_renewal_soft_fail():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
 
     t_a1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
     t_a2 = setup.create_tlsa_obj('211', '12725', 'tcp', 'a.com')
@@ -3590,7 +3590,7 @@ def test_multi_renewal_2xx_up_soft_fail():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'), uid=uid, gid=gid)
 
     t_a1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
     t_a2 = setup.create_tlsa_obj('211', '12725', 'tcp', 'a.com')

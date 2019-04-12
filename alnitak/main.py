@@ -52,10 +52,27 @@ def check_modules(prog):
 def init_dane_directory(prog):
     """Create the dane directory and dane domain subdirectories.
 
+    A. create dane_directory (DD) and its parents and DD has mode 0700.
+    B. [recreate_dane]: chown root:root DD
+    C. [recreate_dane]: chmod 0700 DD.
+    D. get list of live directories (LD)
+    E. make LD names in DD (LDD); if LDD already exists, that is OK
+    F. get symlinks in LD
+    G. set dane_domain_directories
+    H. [recreate_dane]: remove symlink name in LDD; if no file (as there
+       should be), fine
+    I. create symlink name in LDD
+        if [recreate_dane]: if file exists, is an error
+        else: if file exists, must be a symlink
+    J. all domains in config should exist on the system (i.e., no missing
+       Let's Encrypt certificates).
+    K. set dane_domain_directories
+
     This function will check to see if the dane directory is 'sane' and
     will create the necessary folders and symlinks if they are missing.
     It will not try to fix mistakes unless 'prog.recreate_dane' is set
     to 'True': it will exit if errors are encountered.
+
     Note that even when 'prog.recreate_dane' is set to 'True', we will
     not remove files or folders that are no longer used (e.g. if a
     previous config file defined the domain 'x.com' and this program
@@ -76,6 +93,7 @@ def init_dane_directory(prog):
     prog.log.info2("+++ initializing 'dane' direcory: '{}'".format(
                                                         prog.dane_directory))
 
+    # operation: A
     # create dane directory if it doesn't exist. We'll restrict the
     # permissions of this directory to 700, following the letsencrypt
     # directories.
@@ -99,6 +117,7 @@ def init_dane_directory(prog):
         return Prog.RetVal.exit_failure
 
 
+    # operation: B
     # if the dane directory alrwady exists, then its permissions might not
     # be correct. If told to recreate the directory, fix its permissions now:
     if prog.recreate_dane:
@@ -107,12 +126,15 @@ def init_dane_directory(prog):
         try:
             prog.dane_directory.chmod(0o700)
         except OSError as ex:
-            prog.log.error("changing permissions of dane directory '{}' failed: {}".format(ex.filename, ex.strerror.lower()))
+            prog.log.error(
+                "changing permissions of dane directory '{}' failed: {}".format(
+                                            ex.filename, ex.strerror.lower()))
             return Prog.RetVal.exit_failure
 
         prog.log.info2(
             " ++ checking/fixing owner of dane direcory: should be 'root:root'")
         try:
+            # operation: C
             # when running tests (unless run as root) we won't have
             # permissions to do this, so we have to skip this when testing
             if not prog.testing_mode:
@@ -124,6 +146,7 @@ def init_dane_directory(prog):
             return Prog.RetVal.exit_failure
 
 
+    # operation: D
     # get a list of directories in the letsencrypt live directory (named after
     # domains)
     prog.log.info3("  + domain directories in the live direcory '{}':".format(
@@ -153,8 +176,10 @@ def init_dane_directory(prog):
 
         dane_d = pathlib.Path(prog.dane_directory / d.name)
 
-        prog.log.info2(" ++ checking dane domain directory '{}'".format(dane_d))
+        prog.log.info2(
+                " ++ checking dane domain directory '{}'".format(dane_d))
 
+        # operation: E
         # implement 1): create dane/$(basename d)
         try:
             dane_d.mkdir()
@@ -177,6 +202,7 @@ def init_dane_directory(prog):
             retval = Prog.RetVal.exit_failure
             continue
 
+        # operation: F
         # implement 2): first, we get a list of symlinks in the live domain
         # directory
         prog.log.info3(
@@ -192,6 +218,7 @@ def init_dane_directory(prog):
             continue
 
 
+        # operation: G
         # let's add the domain directory and the symlinks inside it to
         # prog.dane_domain_directories
         prog.dane_domain_directories[d.name] = link_list
@@ -204,6 +231,7 @@ def init_dane_directory(prog):
 
             dane_l = pathlib.Path(dane_d / l)
 
+            # operation: H
             # if recreating the dane directory, remove the file even if it is
             # OK and we'll just create a new symlink.
             try:
@@ -219,6 +247,7 @@ def init_dane_directory(prog):
                 continue
 
 
+            # operation: I
             try:
                 dane_l.symlink_to( relative_to(dane_l, d / l) )
             except FileExistsError as ex:
@@ -253,6 +282,7 @@ def init_dane_directory(prog):
     if not retval == Prog.RetVal.ok:
         return retval
 
+    # operation: J
     # the dane directory and symlinks have been created (or are fine). Now,
     # every domain in the prog.target_list MUST exist in
     # prog.dane_domain_directories:
@@ -261,6 +291,7 @@ def init_dane_directory(prog):
             prog.log.error("domain '{}' from config file does not have a corresponding letsencrypt directory".format(t.domain))
             retval = Prog.RetVal.exit_failure
 
+    # operation: K
     # now, prog.dane_domain_directories is a dictionary containing all
     # directory names in the letsencrypt live directory, but we're not
     # interested in _all_ of them, just the ones being used by this
@@ -525,13 +556,13 @@ def delete_dane_if_up(prog, api, tlsa, hash1, hash2 = None):
         DNSProcessingError: if an error occurs that should cause Alnitak
             to exit with an error code.
         DNSNoReturnError: if an error occurs that requests that Alnitak do
-            not exit with an error code (raised from 'binary.delete').
+            not exit with an error code (raised from 'exec.delete').
     """
     prog.log.info1(
             "+++ attempting to delete TLSA DNS record: {}".format(tlsa.pstr()))
 
-    if api.type == Prog.ApiType.binary:
-        from alnitak.api.binary import api_delete
+    if api.type == Prog.ApiType.exec:
+        from alnitak.api.exec import api_delete
         api_delete(prog, api, tlsa, hash1, hash2)
     else:
         apimod = import_module('alnitak.api.' + api.type.value)
@@ -1025,6 +1056,8 @@ certificates are renewed.""",
 
     mode.add_argument("-p", "--print",
             help="print TLSA certificate data (hashes) and exit. Without arguments, print the hashes for the TLSA records in the config file; with arguments, print data only for the specified records. With arguments, the input should be in the format 'XYZ:CERT', where X is the TLSA usage (2 or 3 only), Y is the selector (0 or 1), Z is the matching type (0, 1 or 2) and CERT should either be the relevant X.509 certificate, or else the Let's Encrypt domain the certificate is to be found in (i.e., e.g., 'example.com').",
+            dest='printrecord',
+            metavar='XYZ:CERT',
             action="append",
             type=printrecord.arg_type,
             nargs="*")
@@ -1037,26 +1070,20 @@ certificates are renewed.""",
             help="run in pre-hook mode, to be run on the Let's Encrypt pre-hook function",
             action='store_true')
 
-    mode.add_argument("--deploy",
-            help="synonym for the '--post' flag",
-            action='store_true')
-
-    mode.add_argument("--post",
+    mode.add_argument("--post", "--deploy",
             help="run in post-hook mode, to be run on the Let's Encrypt post-hook/deploy-hook function",
             action='store_true')
 
-    mode.add_argument("--init",
-            help="synonym for the '--reset' flag",
-            action='store_true')
-
-    mode.add_argument("--reset",
-            help="recreate the symlinks in the dane directory",
+    mode.add_argument("--reset", "--init",
+            help="create (or recreate) the dane directory",
             action='store_true')
 
     parser.add_argument("--dane-directory", "-D",
+            metavar='DIR',
             help="directory containing the DANE certificates")
 
     parser.add_argument("--letsencrypt-directory", "-C",
+            metavar='DIR',
             help="directory containing the Let's Encrypt certificates")
 
     parser.add_argument("--ttl",
@@ -1068,14 +1095,14 @@ certificates are renewed.""",
 
     parser.add_argument("-L", "--log-level",
             help="set the logging level",
-            choices=["normal", "verbose", "full", "no"])
+            choices=["no", "normal", "verbose", "debug"])
 
     parser.add_argument("-q", "--quiet",
             help="suppress output to stdout and stderr (but not logfile)",
             action='store_true')
 
     parser.add_argument("-c", "--config",
-            help="read the specified config file")
+            help="read the specified config file instead of the system default")
 
     args = parser.parse_args()
     exec_list = None
@@ -1110,8 +1137,8 @@ certificates are renewed.""",
     if args.log_level:
         if args.log_level == 'verbose':
             prog.log.set_level(Prog.LogLevel.verbose)
-        elif args.log_level == 'full':
-            prog.log.set_level(Prog.LogLevel.full)
+        elif args.log_level == 'debug':
+            prog.log.set_level(Prog.LogLevel.debug)
         elif args.log_level == 'no':
             prog.log.set_level(Prog.LogLevel.nolog)
 
@@ -1125,8 +1152,8 @@ certificates are renewed.""",
         prog.set_config_file(args.config)
 
 
-    if args.print:
-        if [ b for a in args.print for b in a ]:
+    if args.printrecord:
+        if [ b for a in args.printrecord for b in a ]:
             exec_list = [ printrecord.populate_targets,
                           printrecord.certificate_data ]
         else:
@@ -1135,7 +1162,7 @@ certificates are renewed.""",
     if args.config_test:
         exec_list = [ config.read, check_modules ]
 
-    if args.reset or args.init:
+    if args.reset:
         prog.recreate_dane = True
         exec_list = [ config.read, check_modules, init_dane_directory,
                       datafile.remove ]
@@ -1144,7 +1171,7 @@ certificates are renewed.""",
         exec_list = [ config.read, check_modules, init_dane_directory,
                       live_to_archive, datafile.write_prehook ]
 
-    if args.post or args.deploy:
+    if args.post:
         exec_list = [ config.read, check_modules, set_renewed_domains,
                       datafile.read, datafile.check_data, process_data,
                       datafile.write_posthook ]

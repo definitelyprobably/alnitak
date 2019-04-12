@@ -17,7 +17,7 @@ def test_config_default():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
 
     t_a1 = setup.create_tlsa_obj('311', '12725', 'tcp', 'a.com')
     t_a2 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
@@ -47,7 +47,7 @@ def test_config1():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
 
     t_a200 = setup.create_tlsa_obj('200', '12725', 'tcp', 'a.com')
     t_a201 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
@@ -81,7 +81,7 @@ def test_config2():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
 
     t_a1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
     t_a2 = setup.create_tlsa_obj('211', '12725', 'tcp', 'a.com')
@@ -105,8 +105,8 @@ def test_config6():
     retval = config.read(prog)
     assert retval == Prog.RetVal.ok
 
-    api0 = setup.create_api_binary_obj(str(s.bin / 'dns'))
-    api1 = setup.create_api_binary_obj(['bin', '--flag1', 'input',
+    api0 = setup.create_api_exec_obj(str(s.bin / 'dns'))
+    api1 = setup.create_api_exec_obj(['bin', '--flag1', 'input',
                                         "input with\t whitespace"])
     api2 = setup.create_api_c4_obj(zone='ZONE', email='me@domain.com',
                                    key='KEY')
@@ -163,7 +163,7 @@ def test_fail_configX2():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     ta = setup.create_target_obj('a.com', api, [], [])
 
     assert prog.target_list == [ta]
@@ -230,7 +230,7 @@ def test_fail_configX6():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     ta = setup.create_target_obj('a.com', api, [], [])
 
     assert prog.target_list == [ta]
@@ -249,7 +249,7 @@ def test_fail_configX7():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     ta = setup.create_target_obj('a.com', api, [], [])
 
     assert prog.target_list == [ta]
@@ -268,7 +268,7 @@ def test_fail_configX8():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     ta = setup.create_target_obj('a.com', api, [], [])
 
     assert prog.target_list == [ta]
@@ -287,7 +287,7 @@ def test_fail_configX9():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     ta = setup.create_target_obj('a.com', api, [], [])
 
     assert prog.target_list == [ta]
@@ -306,7 +306,7 @@ def test_fail_configX10():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     ta = setup.create_target_obj('a.com', api, [], [])
 
     assert prog.target_list == [ta]
@@ -325,7 +325,7 @@ def test_fail_configX11():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     ta = setup.create_target_obj('a.com', api, [], [])
 
     assert prog.target_list == [ta]
@@ -344,7 +344,7 @@ def test_fail_configX12():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     ta = setup.create_target_obj('a.com', api, [], [])
 
     assert prog.target_list == [ta]
@@ -363,7 +363,7 @@ def test_fail_configX13():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     ta = setup.create_target_obj('a.com', api, [], [])
 
     assert prog.target_list == [ta]
@@ -382,7 +382,7 @@ def test_fail_configX14():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     ta = setup.create_target_obj('a.com', api, [], [])
 
     assert prog.target_list == [ta]
@@ -401,7 +401,7 @@ def test_fail_configX15():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     t_a1 = setup.create_tlsa_obj('202', '1', 'tcp', 'a.com')
     ta = setup.create_target_obj('a.com', api, [], [t_a1])
 
@@ -440,7 +440,7 @@ def test_fail_configX17():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     t_a1 = setup.create_tlsa_obj('202', '1', 'tcp', 'a.com')
     ta = setup.create_target_obj('a.com', api, [], [t_a1])
 
@@ -460,7 +460,7 @@ def test_fail_configX18():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     t_a1 = setup.create_tlsa_obj('202', '1', 'tcp', 'a.com')
     ta = setup.create_target_obj('a.com', api, [], [t_a1])
 
@@ -480,7 +480,7 @@ def test_fail_configX19():
     retval = config.read(prog)
     assert retval == Prog.RetVal.config_failure
 
-    api = setup.create_api_binary_obj(str(s.bin / 'dns'))
+    api = setup.create_api_exec_obj(str(s.bin / 'dns'))
     ta = setup.create_target_obj('a.com', api, [], [])
 
     assert prog.target_list == [ta]

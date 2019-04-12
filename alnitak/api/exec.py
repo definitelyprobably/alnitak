@@ -35,7 +35,7 @@ def get_gid(api):
     functions do not ever set this value to anything but 'None' right now.
 
     Args:
-        api (ApiBinary):
+        api (ApiExec):
 
     Returns:
         int: GID value or else 'None' if 'api.uid' is 'None'.
@@ -82,7 +82,7 @@ def drop_privs(api):
     user number 'api.uid', then finally set the new GID and UID.
 
     Args:
-        api (ApiBinary): object containing the UID and GID values to drop
+        api (ApiExec): object containing the UID and GID values to drop
             to.
 
     Returns:
@@ -128,7 +128,7 @@ def api_publish(prog, api, tlsa, hash):
 
     Args:
         prog (State): not changed.
-        api (ApiBinary): details of the program to run.
+        api (ApiExec): details of the program to run.
         tlsa (Tlsa): details of the DANE TLSA record to publish.
         hash (str): DANE TLSA 'certificate data' (hash) to publish.
 
@@ -211,7 +211,7 @@ def api_delete(prog, api, tlsa, hash1, hash2):
 
     Args:
         prog (State): not changed.
-        api (ApiBinary): details of the program to run.
+        api (ApiExec): details of the program to run.
         tlsa (Tlsa): details of the DANE TLSA record to delete.
         hash1 (str): DANE TLSA 'certificate data' (hash) to delete.
         hash2 (str): DANE TLSA 'certificate data' (hash) to check if up
@@ -293,22 +293,22 @@ def api_delete(prog, api, tlsa, hash1, hash2):
 
 
 def get_api(prog, input_list, state):
-    """Create an ApiBinary object from a config file line.
+    """Create an ApiExec object from a config file line.
 
-    Given an 'api = binary ...' line in a config file, construct
-    and return an ApiBinary object, or else 'None' if an error is
+    Given an 'api = exec ...' line in a config file, construct
+    and return an ApiExec object, or else 'None' if an error is
     encountered.
 
     Args:
         prog (State): not changed.
         input_list (list(str)): a list of whitespace-delimited strings
-            corresponding to the inputs following 'api = binary'
+            corresponding to the inputs following 'api = exec'
             (i.e., the 'inputs' of the 'api' parameter, less the first
-            'binary' input).
+            'exec' input).
         state (ConfigState): class to record config file errors.
 
     Returns:
-        ApiBinary: creates an ApiBinary object from the arguments.
+        ApiExec: creates an ApiExec object from the arguments.
         None: if an error is encountered.
     """
     if input_list[0][0:4] == "uid:":
@@ -321,10 +321,10 @@ def get_api(prog, input_list, state):
         comms = input_list
 
     if len(comms) == 0:
-        state.add_error(prog, "'binary' api scheme given no command to run")
+        state.add_error(prog, "'exec' api scheme given no command to run")
         return None
 
-    return Prog.ApiBinary(comms, uid=uid)
+    return Prog.ApiExec(comms, uid=uid)
 
 
 def get_api_uid(prog, uid, state):
@@ -343,7 +343,7 @@ def get_api_uid(prog, uid, state):
         int: the UID value, or else 'None' if an error is found.
     """
     if len(uid) == 0:
-        state.add_error(prog, "'binary' api scheme: no uid input given")
+        state.add_error(prog, "'exec' api scheme: no uid input given")
         return None
 
     try:
@@ -356,7 +356,7 @@ def get_api_uid(prog, uid, state):
     except KeyError:
         pass
 
-    state.add_error(prog, "'binary' api scheme: uid input '{}' not a valid input".format(uid))
+    state.add_error(prog, "'exec' api scheme: uid input '{}' not a valid input".format(uid))
     return None
 
 

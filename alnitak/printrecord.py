@@ -43,8 +43,8 @@ def populate_targets(prog):
     prog.target_list. When the '--print' flag _is_ given arguments, we need
     to artificially populate prog.target_list with those arguments so that
     the code that follows that will process the data can operate. This is
-    that function. We will read prog.args.print and put that data into
-    prog.target_list.
+    that function. We will read prog.args.printrecord and put that data
+    into prog.target_list.
 
     Args:
         prog (State): program state.
@@ -53,13 +53,13 @@ def populate_targets(prog):
         Prog.RetVal.ok: always returned.
     """
     # we don't run:
-    #   proto = { a for b in prog.args.print for a in b }
+    #   proto = { a for b in prog.args.printrecord for a in b }
     # instead since that randomizes the order of the data requested.
     # I would rather 'alnitak --print' not output different data every
     # time it runs, even if the flags and arguments are identical.
     # Hence, we will use the following longer code:
     proto = []
-    for b in prog.args.print:
+    for b in prog.args.printrecord:
         for a in b:
             if a not in proto:
                 proto += [ a ]

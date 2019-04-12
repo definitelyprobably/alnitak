@@ -83,7 +83,7 @@ class State:
         self.name = "alnitak"
         self.version = alnitak.__version__
         self.copyright = "copyright (c) K. S. Kooner, 2019, MIT License"
-        self.apis = [ 'binary', 'cloudflare' ]
+        self.apis = [ 'exec', 'cloudflare' ]
         self.tlsa_parameters_regex = r"[23][01][012]"
         self.tlsa_domain_regex = r"((\w[a-zA-Z0-9-]*\w|\w+)\.)+\w+"
         self.tlsa_protocol_regex = r"\w+"
@@ -217,7 +217,7 @@ class LogLevel(Enum):
     nolog = 0
     normal = 1
     verbose = 2
-    full = 3
+    debug = 3
 
 class Log():
     """Class to control logging of information.
@@ -501,7 +501,7 @@ class Log():
         self.printmsg(msg, LogLevel.verbose)
 
     def info3(self, msg):
-        self.printmsg(msg, LogLevel.full)
+        self.printmsg(msg, LogLevel.debug)
 
     def error(self, msg):
         if isinstance(msg, str):
@@ -592,8 +592,8 @@ class ApiCloudflare(Api):
     def __hash__(self):
         return super().__hash__()
 
-class ApiBinary(Api):
-    """The 'binary' API scheme
+class ApiExec(Api):
+    """The 'exec' API scheme
 
     Attributes:
         command (list(str)): the command to run (and any flags/inputs).
@@ -604,7 +604,7 @@ class ApiBinary(Api):
     """
 
     def __init__(self, command, uid=None, gid=None):
-        super().__init__(ApiType.binary)
+        super().__init__(ApiType.exec)
         self.command = command
         self.uid = uid
         self.gid = gid # NOTE: not used.
@@ -625,7 +625,7 @@ class ApiBinary(Api):
 
 class ApiType(Enum):
     """The API scheme."""
-    binary = 'binary'
+    exec = 'exec'
     cloudflare = 'cloudflare'
 
 
@@ -646,9 +646,6 @@ class Record:
 
     def __eq__(self, r):
         return (self.params == r.params and self.cert == r.cert)
-
-    def __hash__(self):
-        return hash(self.params + self.cert)
 
     def __str__(self):
         return "  params: {}\n  cert: {}".format(self.params, self.cert)

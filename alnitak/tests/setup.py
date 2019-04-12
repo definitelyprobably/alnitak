@@ -15,12 +15,12 @@ def create_api_c4_obj(zone, email, key):
     a.key = key
     return a
 
-def create_api_binary_obj(command, uid=None, gid=None):
+def create_api_exec_obj(command, uid=None, gid=None):
     if isinstance(command, list):
         prog = command
     else:
         prog = [ command ]
-    return Prog.ApiBinary(prog, uid=uid, gid=gid)
+    return Prog.ApiExec(prog, uid=uid, gid=gid)
 
 def create_tlsa_obj(param, port, protocol, domain, publish=True):
     t = Prog.Tlsa(param, port, protocol, domain)
@@ -693,7 +693,7 @@ exit 10
             file.write('''
             # default config file
             #
-            api=binary {}
+            api=exec {}
 
             [a.com] ##target
             tlsa = 311 12725
@@ -711,7 +711,7 @@ exit 10
             file.write('''
             # example valid config file
             #
-            api=binary {}
+            api=exec {}
 
             [a.com] ##target
             tlsa = 200 12725
@@ -733,7 +733,7 @@ exit 10
             file.write('''
             # example valid config file
             #
-            api=binary {}
+            api=exec {}
 
             [a.com] ##target
             tlsa = 201 12725
@@ -747,7 +747,7 @@ exit 10
             file.write('''
             # default config file
             #
-            api=binary uid:nobody {}
+            api=exec uid:nobody {}
 
             [a.com] ##target
             tlsa = 311 12725
@@ -765,7 +765,7 @@ exit 10
             file.write('''
             # example valid config file
             #
-            api=binary uid:nobody {}
+            api=exec uid:nobody {}
 
             [a.com] ##target
             tlsa = 200 12725
@@ -787,7 +787,7 @@ exit 10
             file.write('''
             # example valid config file
             #
-            api=binary uid:nobody {}
+            api=exec uid:nobody {}
 
             [a.com] ##target
             tlsa = 201 12725
@@ -806,7 +806,7 @@ exit 10
 #dane_directory = NONEXIST2
             dane_directory=/tmp/Q
             letsencrypt_directory=../relative_path
-            api=binary {}
+            api=exec {}
 
             [a.com] ##target
             tlsa=201 12725
@@ -814,7 +814,7 @@ exit 10
             tlsa\t=\t301 12725
             tlsa   =\t\t\t311 12725
             api = cloudflare zone:2 email:A@domain.com key:1
-            api = binary bin --flag1 input "input with\t whitespace"
+            api = exec bin --flag1 input "input with\t whitespace"
 
             \t[ b.com ]
             tlsa \t =\t \t200 1 sctp
@@ -824,7 +824,7 @@ exit 10
             tlsa \t =\t \t211 1 Z.com sctp
             tlsa \t =\t \t212 A.com sctp 1
             tlsa \t =\t \t212 udp B.com 1
-            api = binary X
+            api = exec X
             api = cloudflare zone:ZONE email:me@domain.com key:KEY
             
             [c.com ]
@@ -836,7 +836,7 @@ exit 10
             # example valid config file
             #
 
-            api=binary {}
+            api=exec {}
 
             [a.com]
             tlsa=201 12725
@@ -851,7 +851,7 @@ exit 10
             # example valid config file
             #
 
-            api=binary uid:'nobody' {}
+            api=exec uid:'nobody' {}
 
             [a.com]
             tlsa=201 12725
@@ -867,7 +867,7 @@ exit 10
 #            # example valid config file
 #            #
 #
-#            api=binary uid:'nobody' {}
+#            api=exec uid:'nobody' {}
 #
 #            [a.com]
 #            tlsa=201 12725
@@ -877,7 +877,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             '''.format(self.binary))
@@ -886,7 +886,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -896,7 +896,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a]
@@ -907,7 +907,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [-a.com]
@@ -918,7 +918,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a-.com]
@@ -929,7 +929,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -940,7 +940,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -951,7 +951,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -962,7 +962,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -973,7 +973,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -984,7 +984,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -995,7 +995,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -1006,7 +1006,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -1017,7 +1017,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -1028,7 +1028,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -1040,7 +1040,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api binary {}
+            api exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -1051,7 +1051,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory  /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -1062,7 +1062,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory  /var/tmp
             [a.com]
@@ -1073,7 +1073,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary {}
+            api=exec {}
             dane_directory = /tmp
             letsencrypt_directory = /var/tmp
             [a.com]
@@ -1084,7 +1084,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary uid: {}
+            api=exec uid: {}
             [a.com]
             tlsa = 202 1
             '''.format(self.binary))
@@ -1093,7 +1093,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary uid:nonexistentuserwithastupidlylongusername {}
+            api=exec uid:nonexistentuserwithastupidlylongusername {}
             [a.com]
             tlsa = 202 1
             '''.format(self.binary))
@@ -1102,7 +1102,7 @@ exit 10
             file.write('''
             # example invalid config file
             #
-            api=binary uid:nonexistentuserwithastupidlylongusername
+            api=exec uid:nonexistentuserwithastupidlylongusername
             [a.com]
             tlsa = 202 1
             ''')
@@ -1216,7 +1216,7 @@ def create_state_obj(init=None, config=None, recreate=True, lock=False,
 
     if log:
         prog.log.set_file(init.varlog / 'log')
-        prog.log.set_level(Prog.LogLevel.full)
+        prog.log.set_level(Prog.LogLevel.debug)
     else:
         prog.log.set_nolog()
     

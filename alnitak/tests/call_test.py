@@ -57,7 +57,7 @@ def test_logging1():
 
     assert not log.exists()
 
-    p = Popen(['alnitak', '-t', '-l', str(s.varlog / 'log'), '-Lfull',
+    p = Popen(['alnitak', '-t', '-l', str(s.varlog / 'log'), '-Ldebug',
             '-c', str(s.configX1)], stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
@@ -77,7 +77,7 @@ def test_logging2():
 
     assert not log.exists()
 
-    p = Popen(['alnitak', '-t', '-l-', '-Lfull',
+    p = Popen(['alnitak', '-t', '-l-', '-Ldebug',
             '-c', str(s.configX1)], stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
@@ -96,7 +96,7 @@ def test_logging3():
 
     assert not log.exists()
 
-    p = Popen(['alnitak', '-t', '-lno', '-Lfull',
+    p = Popen(['alnitak', '-t', '-lno', '-Ldebug',
             '-c', str(s.configX1)], stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
@@ -115,7 +115,7 @@ def test_logging4():
 
     assert not log.exists()
 
-    p = Popen(['alnitak', '-t', '-l', str(s.varlog / 'log'), '-Lfull', '-q',
+    p = Popen(['alnitak', '-t', '-l', str(s.varlog / 'log'), '-Ldebug', '-q',
             '-c', str(s.configX1)], stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
@@ -135,7 +135,7 @@ def test_logging5():
 
     assert not log.exists()
 
-    p = Popen(['alnitak', '-t', '-l-', '-Lfull', '-q',
+    p = Popen(['alnitak', '-t', '-l-', '-Ldebug', '-q',
             '-c', str(s.configX1)], stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
@@ -154,7 +154,7 @@ def test_logging6():
 
     assert not log.exists()
 
-    p = Popen(['alnitak', '-t', '-lno', '-Lfull', '-q',
+    p = Popen(['alnitak', '-t', '-lno', '-Ldebug', '-q',
             '-c', str(s.configX1)], stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
