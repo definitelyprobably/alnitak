@@ -16,39 +16,6 @@ from alnitak import printrecord
 
 
 
-def check_modules(prog):
-    """Check if the native API modules are installed for the given API scheme.
-
-    This function will try to import the native python API libraries for
-    relvent API schemes (that are also specified in the config file). If not
-    present, we will fall back to using the HTTP RESTful API.
-
-    Args:
-        prog (State): program internal state. Note that prog.data is empty
-            at this point, the targets read from the config file are still
-            in prog.target_list right after the config file has been read.
-
-    Returns:
-        RetVal: always returns 'RetVal.ok'.
-    """
-    prog.log.info3("+++ checking API modules are loaded")
-
-    apis = { t.api for t in prog.target_list }
-    for a in apis:
-        prog.log.info3(" ++ {}".format(a.type))
-
-    for a in apis:
-        if a.type == Prog.ApiType.cloudflare:
-            try:
-                from CloudFlare import CloudFlare
-                a.cloudflare = CloudFlare(email=a.email, token=a.key)
-                prog.log.info3("  + native API module installed")
-            except ModuleNotFoundError:
-                prog.log.info3("  + native API module not installed")
-
-    return Prog.RetVal.ok
-
-
 def init_dane_directory(prog):
     """Create the dane directory and dane domain subdirectories.
 
@@ -1160,25 +1127,24 @@ certificates are renewed.""",
             exec_list = [ config.read, printrecord.certificate_data ]
 
     if args.config_test:
-        exec_list = [ config.read, check_modules ]
+        exec_list = [ config.read ]
 
     if args.reset:
         prog.recreate_dane = True
-        exec_list = [ config.read, check_modules, init_dane_directory,
-                      datafile.remove ]
+        exec_list = [ config.read, init_dane_directory, datafile.remove ]
 
     if args.pre:
-        exec_list = [ config.read, check_modules, init_dane_directory,
-                      live_to_archive, datafile.write_prehook ]
+        exec_list = [ config.read, init_dane_directory, live_to_archive,
+                      datafile.write_prehook ]
 
     if args.post:
-        exec_list = [ config.read, check_modules, set_renewed_domains,
-                      datafile.read, datafile.check_data, process_data,
+        exec_list = [ config.read, set_renewed_domains, datafile.read,
+                      datafile.check_data, process_data,
                       datafile.write_posthook ]
 
     if not exec_list:
-        exec_list = [ config.read, check_modules, set_renewed_domains,
-                      datafile.read, datafile.check_data, process_data,
+        exec_list = [ config.read, set_renewed_domains, datafile.read,
+                      datafile.check_data, process_data,
                       datafile.write_posthook ]
 
 

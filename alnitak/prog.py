@@ -552,13 +552,18 @@ class Api:
 
     Attributes:
         type (ApiType): the specific API scheme.
+        domain (str): the domain the API calls will be for.
     """
 
     def __init__(self, type):
         self.type = type
+        self.domain = None
+
+    def set_domain(self, d):
+        self.domain = d
 
     def __eq__(self, a):
-        return self.type == a.type
+        return (self.type == a.type and self.domain == a.domain)
 
     def __hash__(self):
         return hash(self.type)
@@ -575,19 +580,28 @@ class ApiCloudflare(Api):
         key (str): the key of the user to login with.
     """
 
-    def __init__(self):
+    def __init__(self, email=None, key=None):
         super().__init__(ApiType.cloudflare)
         self.cloudflare = None
         self.zone = None
-        self.email = None
-        self.key = None
+        self.email = email
+        self.key = key
+
+    def copy(self):
+        # this will be use in config.read to do a 'shallow' copy: we don't
+        # want any global api instance to be bound to any targets since then
+        # changes to the domain of that api object for every target will
+        # affect every other target's api object.
+        return ApiCloudflare(self.email, self.key)
 
     def __str__(self):
-        return "    - {}\n       zone: ...({})\n       email: ...({})\n       key: ...({})".format(self.type, len(self.zone), len(self.email), len(self.key))
+        return "    - {}\n       domain: {}\n       email: ...({})\n       key: ...({})".format(self.type, self.domain, len(self.email), len(self.key))
 
     def __eq__(self, a):
-        return (self.type == a.type and self.zone == a.zone
-                and self.email == a.email and self.key == a.key)
+        return (self.type == a.type and self.domain == a.domain
+                and self.zone == a.zone
+                and self.email == a.email
+                and self.key == a.key)
 
     def __hash__(self):
         return super().__hash__()
@@ -609,15 +623,24 @@ class ApiExec(Api):
         self.uid = uid
         self.gid = gid # NOTE: not used.
 
+    def copy(self):
+        # this will be use in config.read to do a 'shallow' copy: we don't
+        # want any global api instance to be bound to any targets since then
+        # changes to the domain of that api object for every target will
+        # affect every other target's api object.
+        return ApiExec(self.command, self.uid, self.gid)
+
     def __str__(self):
-        return "    - {}\n       command: {} [uid: {}]".format(self.type, self.command, self.uid, self.gid)
+        return "    - {}\n       domain: {}\n       command: {} [uid: {}]".format(self.type, self.domain, self.command, self.uid, self.gid)
 
     def rstr(self):
-        return "[{}]".format("] [".join(self.command)) + " (uid:{})".format(self.uid, self.gid)
+        return "[{}]".format("] [".join(self.command)) + " (uid:{}) ({})".format(self.uid, self.domain)
 
     def __eq__(self, a):
-        return (self.type == a.type and self.command == a.command
-                and self.uid == a.uid and self.gid == a.gid)
+        return (self.type == a.type and self.domain == a.domain
+                and self.command == a.command
+                and self.uid == a.uid
+                and self.gid == a.gid)
 
     def __hash__(self):
         return super().__hash__()

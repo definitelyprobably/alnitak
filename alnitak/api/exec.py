@@ -73,8 +73,6 @@ def get_gid(api):
 
     raise Except.PrivError("getting GID value failed: no group or user GID value for '{}' found".found(api.gid))
 
-
-
 def drop_privs(api):
     """Drop privileges of the running process.
 
@@ -116,7 +114,6 @@ def drop_privs(api):
     except OSError as ex:
         raise Except.PrivError("droping UID privileges to user '{}' failed: {}".format(api.uid, ex.strerror.lower()))
 
-
 def drop_privs_lambda(api):
     """Return a lambda function of the drop_privs(api) function."""
     return lambda : drop_privs(api)
@@ -151,6 +148,9 @@ def api_publish(prog, api, tlsa, hash):
     environ = { "PATH":
                 "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
                 "IFS": " \t\n",
+                "RENEWED_DOMAINS": " ".join(prog.renewed_domains),
+                "ZONE_DOMAIN": api.domain,
+                "LE_DIR": prog.letsencrypt_directory,
                 "TLSA_PARAM": "{}{}{}".format(
                                 tlsa.usage, tlsa.selector, tlsa.matching),
                 "TLSA_USAGE": tlsa.usage,
@@ -205,7 +205,6 @@ def api_publish(prog, api, tlsa, hash):
     raise Except.DNSProcessingError(errmsg)
 
 
-
 def api_delete(prog, api, tlsa, hash1, hash2):
     """Delete a DANE TLSA record.
 
@@ -235,6 +234,9 @@ def api_delete(prog, api, tlsa, hash1, hash2):
     environ = { "PATH":
                 "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin",
                 "IFS": " \t\n",
+                "RENEWED_DOMAINS": " ".join(prog.renewed_domains),
+                "ZONE_DOMAIN": api.domain,
+                "LE_DIR": prog.letsencrypt_directory,
                 "TLSA_PARAM": "{}{}{}".format(
                                 tlsa.usage, tlsa.selector, tlsa.matching),
                 "TLSA_USAGE": tlsa.usage,
@@ -292,7 +294,8 @@ def api_delete(prog, api, tlsa, hash1, hash2):
     raise Except.DNSProcessingError(errmsg)
 
 
-def get_api(prog, input_list, state):
+
+def get_api(prog, domain, input_list, state):
     """Create an ApiExec object from a config file line.
 
     Given an 'api = exec ...' line in a config file, construct
@@ -301,6 +304,8 @@ def get_api(prog, input_list, state):
 
     Args:
         prog (State): not changed.
+        domain (str): the domain (section) the api command is in. Note: can
+            be 'None' if the api command was global.
         input_list (list(str)): a list of whitespace-delimited strings
             corresponding to the inputs following 'api = exec'
             (i.e., the 'inputs' of the 'api' parameter, less the first
@@ -324,8 +329,10 @@ def get_api(prog, input_list, state):
         state.add_error(prog, "'exec' api scheme given no command to run")
         return None
 
-    return Prog.ApiExec(comms, uid=uid)
-
+    api = Prog.ApiExec(comms, uid=uid)
+    if domain:
+        api.set_domain(domain)
+    return api
 
 def get_api_uid(prog, uid, state):
     """Extract a UID from the input.
@@ -358,5 +365,4 @@ def get_api_uid(prog, uid, state):
 
     state.add_error(prog, "'exec' api scheme: uid input '{}' not a valid input".format(uid))
     return None
-
 

@@ -108,8 +108,7 @@ def test_config6():
     api0 = setup.create_api_exec_obj(str(s.bin / 'dns'))
     api1 = setup.create_api_exec_obj(['bin', '--flag1', 'input',
                                         "input with\t whitespace"])
-    api2 = setup.create_api_c4_obj(zone='ZONE', email='me@domain.com',
-                                   key='KEY')
+    api2 = setup.create_api_c4_obj(email='me@domain.com', key='KEY')
 
     t_a1 = setup.create_tlsa_obj('201', '12725', 'tcp', 'a.com')
     t_a2 = setup.create_tlsa_obj('211', '12725', 'tcp', 'a.com')

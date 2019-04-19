@@ -34,9 +34,7 @@ def read(prog):
 
     prog.log.info1("+++ reading config file '{}'".format(prog.config))
 
-
     line_pos = 0
-
     state = Prog.ConfigState()
 
     active_section = None
@@ -60,10 +58,17 @@ def read(prog):
                     target = t
                     break
             else:
-                prog.target_list += [ Prog.Target(active_section.lower()) ]
+                prog.target_list += [ Prog.Target(active_section) ]
                 target = prog.target_list[-1]
                 if default_api:
-                    target.api = default_api
+                    target.api = default_api.copy()
+                    # NOT 'target.api = default_api'. If we do that, then in
+                    # the following line when we change the api object's
+                    # domain attribute, it will change the domain in _all_ of
+                    # the targets. We need to create a NEW object that is
+                    # (mostly) the same as the default_api object, and we do
+                    # this with the 'copy' method.
+                    target.api.domain = active_section
                 for tlsa in default_tlsa_list:
                     tlsa.domain = active_section
                     target.add_tlsa(tlsa)
@@ -107,7 +112,8 @@ def read(prog):
 
                 if inputs[0] in prog.apis:
                     apimod = import_module('alnitak.api.' + inputs[0])
-                    api = apimod.get_api(prog, inputs[1:], state)
+                    api = apimod.get_api(prog, active_section,
+                                         inputs[1:], state)
                     if api:
                         if active_section:
                             target.api = api

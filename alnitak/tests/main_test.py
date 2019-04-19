@@ -16,7 +16,7 @@ from alnitak.tests import setup
 
 sleep_time = 0
 
-def test_success_config_default():
+def test_1_success_config_default():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
         uid = None
@@ -391,7 +391,7 @@ def test_success_config_default():
             assert wd[0:namelen] == name
 
 
-def test_success_2xx_up_config_default():
+def test_2_success_2xx_up_config_default():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
         uid = None
@@ -510,8 +510,8 @@ def test_success_2xx_up_config_default():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                    str(s.bin / 'dns'), '--is-up=201' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -566,8 +566,8 @@ def test_success_2xx_up_config_default():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                    str(s.bin / 'dns'), '--is-up=201' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -687,8 +687,8 @@ def test_success_2xx_up_config_default():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                    str(s.bin / 'dns'), '--is-up=201' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -800,7 +800,7 @@ def test_success_2xx_up_config_default():
             assert wd[0:namelen] == name
 
 
-def test_hashes():
+def test_3_hashes():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
         uid = None
@@ -1140,7 +1140,7 @@ def test_hashes():
 
 
 
-def test_2xx_only():
+def test_4_2xx_only():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
         uid = None
@@ -1209,22 +1209,22 @@ def test_2xx_only():
         assert sorted(prog.dane_domain_directories[d]) == sorted(rd[d])
 
     assert os.readlink(str(s.dane / 'a.com' / 'cert.pem')) == \
-                                        '../../le/archive/a.com/cert1.pem'
+                                    '../../le/archive/a.com/cert1.pem'
     assert os.readlink(str(s.dane / 'a.com' / 'chain.pem')) == \
-                                        '../../le/archive/a.com/chain1.pem'
+                                    '../../le/archive/a.com/chain1.pem'
     assert os.readlink(str(s.dane / 'a.com' / 'fullchain.pem')) == \
-                                        '../../le/archive/a.com/fullchain1.pem'
+                                    '../../le/archive/a.com/fullchain1.pem'
     assert os.readlink(str(s.dane / 'a.com' / 'privkey.pem')) == \
-                                        '../../le/archive/a.com/privkey1.pem'
+                                    '../../le/archive/a.com/privkey1.pem'
 
     assert os.readlink(str(s.dane / 'b.com' / 'cert.pem')) == \
-                                        '../../le/archive/b.com/cert1.pem'
+                                    '../../le/archive/b.com/cert1.pem'
     assert os.readlink(str(s.dane / 'b.com' / 'chain.pem')) == \
-                                        '../../le/archive/b.com/chain1.pem'
+                                    '../../le/archive/b.com/chain1.pem'
     assert os.readlink(str(s.dane / 'b.com' / 'fullchain.pem')) == \
-                                        '../../le/archive/b.com/fullchain1.pem'
+                                    '../../le/archive/b.com/fullchain1.pem'
     assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
-                                        '../../le/archive/b.com/privkey1.pem'
+                                    '../../le/archive/b.com/privkey1.pem'
 
     retval = datafile.write_prehook(prog)
     assert retval == Prog.RetVal.ok
@@ -1268,7 +1268,8 @@ def test_2xx_only():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [str(s.bin / 'dns')]
+    for g in prog.data.groups:
+        g.target.api.command = [str(s.bin / 'dns')]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -1316,22 +1317,22 @@ def test_2xx_only():
 
 
     assert os.readlink(str(s.dane / 'a.com' / 'cert.pem')) == \
-                                        '../../le/archive/a.com/cert1.pem'
+                                    '../../le/archive/a.com/cert1.pem'
     assert os.readlink(str(s.dane / 'a.com' / 'chain.pem')) == \
-                                        '../../le/archive/a.com/chain1.pem'
+                                    '../../le/archive/a.com/chain1.pem'
     assert os.readlink(str(s.dane / 'a.com' / 'fullchain.pem')) == \
-                                        '../../le/archive/a.com/fullchain1.pem'
+                                    '../../le/archive/a.com/fullchain1.pem'
     assert os.readlink(str(s.dane / 'a.com' / 'privkey.pem')) == \
-                                        '../../le/archive/a.com/privkey1.pem'
+                                    '../../le/archive/a.com/privkey1.pem'
 
     assert os.readlink(str(s.dane / 'b.com' / 'cert.pem')) == \
-                                        '../../le/archive/b.com/cert1.pem'
+                                    '../../le/archive/b.com/cert1.pem'
     assert os.readlink(str(s.dane / 'b.com' / 'chain.pem')) == \
-                                        '../../le/archive/b.com/chain1.pem'
+                                    '../../le/archive/b.com/chain1.pem'
     assert os.readlink(str(s.dane / 'b.com' / 'fullchain.pem')) == \
-                                        '../../le/archive/b.com/fullchain1.pem'
+                                    '../../le/archive/b.com/fullchain1.pem'
     assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
-                                        '../../le/archive/b.com/privkey1.pem'
+                                    '../../le/archive/b.com/privkey1.pem'
 
 
 
@@ -1354,8 +1355,8 @@ def test_2xx_only():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                        str(s.bin / 'dns'), '--is-up=201:212' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:212' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -1404,22 +1405,22 @@ def test_2xx_only():
 
 
     assert os.readlink(str(s.dane / 'a.com' / 'cert.pem')) == \
-                                        '../../le/archive/a.com/cert1.pem'
+                                    '../../le/archive/a.com/cert1.pem'
     assert os.readlink(str(s.dane / 'a.com' / 'chain.pem')) == \
-                                        '../../le/archive/a.com/chain1.pem'
+                                    '../../le/archive/a.com/chain1.pem'
     assert os.readlink(str(s.dane / 'a.com' / 'fullchain.pem')) == \
-                                        '../../le/archive/a.com/fullchain1.pem'
+                                    '../../le/archive/a.com/fullchain1.pem'
     assert os.readlink(str(s.dane / 'a.com' / 'privkey.pem')) == \
-                                        '../../le/archive/a.com/privkey1.pem'
+                                    '../../le/archive/a.com/privkey1.pem'
 
     assert os.readlink(str(s.dane / 'b.com' / 'cert.pem')) == \
-                                        '../../le/archive/b.com/cert1.pem'
+                                    '../../le/archive/b.com/cert1.pem'
     assert os.readlink(str(s.dane / 'b.com' / 'chain.pem')) == \
-                                        '../../le/archive/b.com/chain1.pem'
+                                    '../../le/archive/b.com/chain1.pem'
     assert os.readlink(str(s.dane / 'b.com' / 'fullchain.pem')) == \
-                                        '../../le/archive/b.com/fullchain1.pem'
+                                    '../../le/archive/b.com/fullchain1.pem'
     assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
-                                        '../../le/archive/b.com/privkey1.pem'
+                                    '../../le/archive/b.com/privkey1.pem'
 
 
 
@@ -1438,8 +1439,8 @@ def test_2xx_only():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                        str(s.bin / 'dns'), "--is-up=201:212" ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), "--is-up=201:212" ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -1499,7 +1500,7 @@ def test_2xx_only():
 
 
 
-def test_2xx_only_already_up():
+def test_5_2xx_only_already_up():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
         uid = None
@@ -1559,8 +1560,10 @@ def test_2xx_only_already_up():
 
     assert retval == Prog.RetVal.ok
 
-    rd = { 'a.com': [ 'cert.pem', 'chain.pem', 'privkey.pem', 'fullchain.pem' ],
-           'b.com': [ 'cert.pem', 'chain.pem', 'privkey.pem', 'fullchain.pem' ],
+    rd = { 'a.com':
+                [ 'cert.pem', 'chain.pem', 'privkey.pem', 'fullchain.pem' ],
+           'b.com':
+                [ 'cert.pem', 'chain.pem', 'privkey.pem', 'fullchain.pem' ],
          }
 
     assert len(prog.dane_domain_directories) == 2
@@ -1627,8 +1630,8 @@ def test_2xx_only_already_up():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                        str(s.bin / 'dns'), '--is-up=201:212' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:212' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -1686,7 +1689,7 @@ def test_2xx_only_already_up():
 
 
 
-def test_single_renewal_soft_fail():
+def test_6_single_renewal_soft_fail():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
         uid = None
@@ -1789,8 +1792,8 @@ def test_single_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                    str(s.bin / 'dns'), '--fail-publish' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -1854,8 +1857,8 @@ def test_single_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                    str(s.bin / 'dns'), '--fail-publish' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -1920,8 +1923,8 @@ def test_single_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                    str(s.bin / 'dns'), '--fail-delete' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -1985,8 +1988,8 @@ def test_single_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                    str(s.bin / 'dns'), '--fail-delete' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -2052,7 +2055,8 @@ def test_single_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [ str(s.bin / 'dns') ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns') ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -2097,7 +2101,7 @@ def test_single_renewal_soft_fail():
 
 
 
-def test_single_renewal_2xx_up_soft_fail():
+def test_7_single_renewal_2xx_up_soft_fail():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
         uid = None
@@ -2200,8 +2204,9 @@ def test_single_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                str(s.bin / 'dns'), '--fail-publish', '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -2261,8 +2266,9 @@ def test_single_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                    str(s.bin / 'dns'), '--fail-publish', '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -2319,8 +2325,9 @@ def test_single_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                    str(s.bin / 'dns'), '--fail-delete', '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -2379,8 +2386,9 @@ def test_single_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                    str(s.bin / 'dns'), '--fail-delete', '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -2436,8 +2444,8 @@ def test_single_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                        str(s.bin / 'dns'), '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -2475,7 +2483,7 @@ def test_single_renewal_2xx_up_soft_fail():
 
 
 
-def test_single_renewal_2xx_delayed_up_soft_fail():
+def test_8_single_renewal_2xx_delayed_up_soft_fail():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
         uid = None
@@ -2578,8 +2586,8 @@ def test_single_renewal_2xx_delayed_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                    str(s.bin / 'dns'), '--fail-publish' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -2643,8 +2651,9 @@ def test_single_renewal_2xx_delayed_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                    str(s.bin / 'dns'), '--fail-publish', '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -2705,8 +2714,9 @@ def test_single_renewal_2xx_delayed_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                    str(s.bin / 'dns'), '--fail-delete', '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -2765,8 +2775,9 @@ def test_single_renewal_2xx_delayed_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                    str(s.bin / 'dns'), '--fail-delete', '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -2822,8 +2833,8 @@ def test_single_renewal_2xx_delayed_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                        str(s.bin / 'dns'), '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -2861,7 +2872,7 @@ def test_single_renewal_2xx_delayed_up_soft_fail():
 
 
 
-def test_multi_renewal_soft_fail():
+def test_9_multi_renewal_soft_fail():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
         uid = None
@@ -2964,7 +2975,9 @@ def test_multi_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [ str(s.bin / 'dns') ]
+    # already the default: don't need
+    #for g in prog.data.groups:
+    #    g.target.api.command = [ str(s.bin / 'dns') ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -3031,8 +3044,8 @@ def test_multi_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                    str(s.bin / 'dns'), '--fail-delete' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -3111,8 +3124,9 @@ def test_multi_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                    str(s.bin / 'dns'), '--fail-publish', '--fail-delete' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
+                                                     '--fail-delete' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -3195,8 +3209,9 @@ def test_multi_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                    str(s.bin / 'dns'), '--fail-publish', '--fail-delete' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
+                                                     '--fail-delete' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -3286,8 +3301,9 @@ def test_multi_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                        str(s.bin / 'dns'), '--not-up=311', '--fail-publish' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--not-up=311',
+                                                     '--fail-publish' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -3376,8 +3392,8 @@ def test_multi_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                        str(s.bin / 'dns'), '--fail-delete' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -3453,8 +3469,8 @@ def test_multi_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                        str(s.bin / 'dns'), '--not-up=311' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--not-up=311' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -3531,7 +3547,8 @@ def test_multi_renewal_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [ str(s.bin / 'dns') ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns') ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -3572,7 +3589,7 @@ def test_multi_renewal_soft_fail():
 
 
 
-def test_multi_renewal_2xx_up_soft_fail():
+def test_10_multi_renewal_2xx_up_soft_fail():
     s = setup.Init(keep=True)
     if os.getuid() != 0:
         uid = None
@@ -3675,8 +3692,8 @@ def test_multi_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                        str(s.bin / 'dns'), '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -3739,8 +3756,8 @@ def test_multi_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                    str(s.bin / 'dns'), '--fail-delete' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -3817,9 +3834,10 @@ def test_multi_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-            str(s.bin / 'dns'), '--fail-publish', '--fail-delete',
-            '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
+                                                     '--fail-delete',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -3911,9 +3929,10 @@ def test_multi_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                    str(s.bin / 'dns'), '--fail-publish', '--fail-delete',
-                    '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
+                                                     '--fail-delete',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -4011,9 +4030,10 @@ def test_multi_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                str(s.bin / 'dns'), '--not-up=311', '--fail-publish',
-                '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--not-up=311',
+                                                     '--fail-publish',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -4102,8 +4122,9 @@ def test_multi_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                    str(s.bin / 'dns'), '--fail-delete', '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
@@ -4178,8 +4199,9 @@ def test_multi_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                        str(s.bin / 'dns'), '--not-up=311', '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--not-up=311',
+                                                     '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok
@@ -4243,8 +4265,8 @@ def test_multi_renewal_2xx_up_soft_fail():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    prog.data.groups[0].target.api.command = [
-                                        str(s.bin / 'dns'), '--is-up=201:211' ]
+    for g in prog.data.groups:
+        g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:211' ]
 
     retval = main.process_data(prog)
     assert retval == Prog.RetVal.ok

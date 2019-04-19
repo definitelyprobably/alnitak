@@ -8,9 +8,8 @@ from alnitak import prog as Prog
 from pathlib import Path
 
 
-def create_api_c4_obj(zone, email, key):
+def create_api_c4_obj(email, key):
     a = Prog.ApiCloudflare()
-    a.zone = zone
     a.email = email
     a.key = key
     return a
@@ -42,7 +41,10 @@ def create_target_obj(domain, api=None, certs=[], tlsas=[]):
     t = Prog.Target(domain)
     t.certs = certs
     t.tlsa = tlsas
-    t.api = api
+    if api:
+        t.api = api.copy()
+    if t.api:
+        t.api.domain = domain
     return t
 
 def create_datapre_obj(domain, lineno, dane, live, archive, pending,
@@ -155,6 +157,8 @@ class Init:
         self.configX20 = self.etc / 'alnitak.conf.X20'
         self.configX21 = self.etc / 'alnitak.conf.X21'
         self.configX22 = self.etc / 'alnitak.conf.X22'
+
+        self.configC1 = self.etc / 'alnitak.conf.C1'
 
         self.binary = self.bin / 'dns'
         #self.binary_wait = self.bin / 'wait'
@@ -813,7 +817,7 @@ exit 10
             tlsa \t=\t 211 12725
             tlsa\t=\t301 12725
             tlsa   =\t\t\t311 12725
-            api = cloudflare zone:2 email:A@domain.com key:1
+            api = cloudflare email:A@domain.com key:1
             api = exec bin --flag1 input "input with\t whitespace"
 
             \t[ b.com ]
@@ -825,7 +829,7 @@ exit 10
             tlsa \t =\t \t212 A.com sctp 1
             tlsa \t =\t \t212 udp B.com 1
             api = exec X
-            api = cloudflare zone:ZONE email:me@domain.com key:KEY
+            api = cloudflare email:me@domain.com key:KEY
             
             [c.com ]
             tlsa=200 2
@@ -1109,8 +1113,6 @@ exit 10
 
 
 
-
-
         # we need to create several files (relative to 'parent'):
         # /etc/le/live/a.com
         # /etc/le/live/b.com
@@ -1187,6 +1189,17 @@ exit 10
         if not self.keep:
             if self.parent.exists():
                 shutil.rmtree(self.parent)
+
+    def create_cloudflare_config(self, path, domain):
+        with open(str(self.configC1), 'w') as file:
+            file.write('''
+            # cloudflare api test config file
+            #
+            api = cloudflare {}
+            [{}]
+            tlsa = 211 53527
+            tlsa = 311 53527
+            '''.format(path, domain))
 
 
 
