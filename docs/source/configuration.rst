@@ -27,7 +27,7 @@ certificates are renewed. A target looks like this::
 
 With this target in the configuration file, if a certificate in
 ``/etc/letsencrypt/archive/example.com/`` is renewed, *alnitak* will attempt
-to create a TLSA RR::
+to create a TLSA record::
 
     TLSA 3 1 1 _443._tcp.example.com
 
@@ -37,23 +37,24 @@ certificates are located in as a section header::
     [DOMAIN]
     # ...
 
-(which indicates that the creation of TLSA RRs will triggered when
+(which indicates that the creation of TLSA records will triggered when
 certificates in ``/etc/letsencrypt/live/DOMAIN/`` are renewed), and at least
 one ``tlsa`` parameter::
 
-    tlsa = PARAMS PORT [PROTOCOL] [RR_DOMAIN]
+    tlsa = PARAMS PORT [PROTOCOL] [RECORD_DATA_DOMAIN]
 
 A ``tlsa`` parameter requires the concatenated parameters of the TLSA record
 (the usage field, the selector field and the matching type field in that
 order), the port the service is running on, and optionally an explicit
 protocol for the service and the domain to appear in the record.
-If no protocol is explicitly specified, "tcp" is assumed; and if no domain is
-explicitly specified, the target's domain is used.
+If no protocol is explicitly specified, "tcp" is assumed; and if no domain
+``RECORD_DATA_DOMAIN`` is explicitly specified, the target's domain
+``DOMAIN`` is used.
 
 Note that only usage fields '2' (DANE-TA) and '3' (DANE-EE) are supported.
 Selector field inputs '0' and '1' are both supported, as well as the matching
-type fields '0', '1' and '2'. Hence, ``PARAMS`` can take any of the following
-values: "[23][01][012]".
+type fields '0', '1' and '2'. Hence, ``PARAMS`` can take any value given by
+the regex: "[23][01][012]".
 
 Examples
 ++++++++
@@ -154,7 +155,7 @@ will be in effect. That is, for the following::
     api = SCHEME_3
     api = SCHEME_4
 
-target ``target1`` will have API scheme ``SCHEME_2`` and target ``target2``
+``target1`` will have API scheme ``SCHEME_2`` and ``target2``
 will have API scheme ``SCHEME_4``.
 
 
@@ -183,6 +184,17 @@ Under either operation, the environment will contain:
 
 * ``PATH``: set to ``"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"``
 * ``IFS``: set to ``" \t\n"``
+* ``LE_DIR``: set to the Let's Encrypt directory (typically
+  ``/etc/letsencrypt``). This is provided in case the program being called
+  needs to do something with the certificates in the Let's Encrypt directory;
+  this parameter provides the program with the parent directory from which
+  the Let's Encrypt certificates were read.
+* ``RENEWED_DOMAINS``: set to all the domains whose certificates were
+  renewed, separated by a single space character. For example: ``example.com example.org example.net``. This is provided in case the program being called
+  needs to know all the domains that were renewed. Note that the program will
+  be called for *each* entry in this list.
+* ``ZONE_DOMAIN``: set to the domain in ``RENEWED_DOMAINS`` that the current
+  call to the program is expected to process.
 * ``TLSA_USAGE``: set to the usage field of the TLSA record.
 * ``TLSA_SELECTOR``: set to the selector field of the TLSA record.
 * ``TLSA_MATCHING``: set to the matching type field of the TLSA record.
@@ -328,10 +340,10 @@ Cloudflare API Scheme
 
 The ``cloudflare`` API scheme is specified either like::
 
-    api = cloudlfare email:EMAIL zone:ZONE key:KEY
+    api = cloudlfare email:EMAIL key:KEY
 
-where ``EMAIL``, ``ZONE`` and ``KEY`` are the credentials required to use
-Cloudflare's API; or::
+where ``ZONE`` and ``KEY`` are the credentials required to use
+Cloudflare's API; or alternatively::
 
     api = cloudflare FILE
 
@@ -339,9 +351,8 @@ where ``FILE`` is the location of the file that contains the credentials.
 Where a credentials file is given, it should contain::
 
     # comments are allowed
-    email=EMAIL  # comments allowed here too
-    zone = ZONE  # whitespace is allowed...
-     key =KEY    # ...except for newlines
+    dns_cloudflare_email=EMAIL  # comments allowed here too
+     dns_cloudflare_api_key =  KEY  # whitespace is also allowed
 
 It is recommended to use a credentials file rather than placing the
 credentials directly in the configuration file.
@@ -353,9 +364,12 @@ writable.
 
 .. note::
 
-   The format for the credentials file here differs than that for the
-   credentials file used by certbot if using the cloudflare dns plugin.
-   Currently, you cannot use the latter for the former.
+   The format for the credentials file is designed to be able to read the
+   file that certbot itself needs to interact with Cloudflare in order to
+   renew a certificate (if utilized; for example if you generated a wildcard
+   certificate). This means that if such a file exists on your system with
+   your Cloudflare API credentials, you can reuse it for *alnitak* and do
+   not need to expose your credentials in two different files.
 
 
 Certbot
@@ -374,7 +388,7 @@ When running certbot explicitly, simply ensure the hooks are specified::
 
 You must run ``alnitak --pre`` on the certbot pre-hook and ``alnitak --deploy``
 on the certbot deploy-hook. Other alnitak flags may also be given, but these
-**must** be specified.
+**must** be present.
 
 The command ``alnitak --pre ...`` ensures that dane certificates are prepared
 for a potential certificate renewal (amongst other things). Likewise, the
@@ -399,7 +413,8 @@ Technically, ``alnitak --pre`` needs to be run before certbot renewal occurs,
 and ``alnitak --deploy`` needs to be run after certbot renewal occurs and be
 given a list of domains that were renewed in the environment parameter
 ``RENEWED_DOMAINS`` (space or tab delimited).
-The most convenient way to do this is on the certbot pre and deploy hooks.
+The most convenient way to do this is on the certbot pre and deploy hooks, but
+it is not necessary.
 
 .. warning::
 

@@ -7,11 +7,11 @@ from time import sleep
 from pathlib import Path
 import pytest
 
-from alnitak import main
 from alnitak import config
 from alnitak import datafile
 from alnitak import prog as Prog
 from alnitak import certop
+from alnitak import dane
 from alnitak.tests import setup
 
 sleep_time = 0
@@ -52,7 +52,7 @@ def test_1_success_config_default():
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
 
-    retval = main.init_dane_directory(prog)
+    retval = dane.init_dane_directory(prog)
 
     assert retval == Prog.RetVal.ok
     assert s.dane.exists()
@@ -69,7 +69,7 @@ def test_1_success_config_default():
                                         '../../le/live/a.com/privkey.pem'
 
 
-    retval = main.live_to_archive(prog)
+    retval = dane.live_to_archive(prog)
 
     assert retval == Prog.RetVal.ok
 
@@ -135,7 +135,7 @@ def test_1_success_config_default():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -188,7 +188,7 @@ def test_1_success_config_default():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -238,7 +238,7 @@ def test_1_success_config_default():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -294,7 +294,7 @@ def test_1_success_config_default():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -352,7 +352,7 @@ def test_1_success_config_default():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -427,7 +427,7 @@ def test_2_success_2xx_up_config_default():
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
 
-    retval = main.init_dane_directory(prog)
+    retval = dane.init_dane_directory(prog)
 
     assert retval == Prog.RetVal.ok
     assert s.dane.exists()
@@ -444,7 +444,7 @@ def test_2_success_2xx_up_config_default():
                                         '../../le/live/a.com/privkey.pem'
 
 
-    retval = main.live_to_archive(prog)
+    retval = dane.live_to_archive(prog)
 
     assert retval == Prog.RetVal.ok
 
@@ -513,7 +513,7 @@ def test_2_success_2xx_up_config_default():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -569,7 +569,7 @@ def test_2_success_2xx_up_config_default():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -629,7 +629,7 @@ def test_2_success_2xx_up_config_default():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -690,7 +690,7 @@ def test_2_success_2xx_up_config_default():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -754,7 +754,7 @@ def test_2_success_2xx_up_config_default():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -840,7 +840,7 @@ def test_3_hashes():
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
 
-    retval = main.init_dane_directory(prog)
+    retval = dane.init_dane_directory(prog)
 
     assert retval == Prog.RetVal.ok
     assert s.dane.exists()
@@ -857,7 +857,7 @@ def test_3_hashes():
                                         '../../le/live/a.com/privkey.pem'
 
 
-    retval = main.live_to_archive(prog)
+    retval = dane.live_to_archive(prog)
 
     assert retval == Prog.RetVal.ok
 
@@ -913,7 +913,7 @@ def test_3_hashes():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -990,7 +990,7 @@ def test_3_hashes():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -1071,7 +1071,7 @@ def test_3_hashes():
     retval = datafile.check_data(prog)
     assert retval == Prog.RetVal.ok
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -1171,7 +1171,7 @@ def test_4_2xx_only():
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
 
-    retval = main.init_dane_directory(prog)
+    retval = dane.init_dane_directory(prog)
 
     assert retval == Prog.RetVal.ok
     assert s.dane.exists()
@@ -1196,7 +1196,7 @@ def test_4_2xx_only():
     assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
                                         '../../le/live/b.com/privkey.pem'
 
-    retval = main.live_to_archive(prog)
+    retval = dane.live_to_archive(prog)
 
     assert retval == Prog.RetVal.ok
 
@@ -1271,7 +1271,7 @@ def test_4_2xx_only():
     for g in prog.data.groups:
         g.target.api.command = [str(s.bin / 'dns')]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -1358,7 +1358,7 @@ def test_4_2xx_only():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:212' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -1442,7 +1442,7 @@ def test_4_2xx_only():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), "--is-up=201:212" ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -1531,7 +1531,7 @@ def test_5_2xx_only_already_up():
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
 
-    retval = main.init_dane_directory(prog)
+    retval = dane.init_dane_directory(prog)
 
     assert retval == Prog.RetVal.ok
     assert s.dane.exists()
@@ -1556,7 +1556,7 @@ def test_5_2xx_only_already_up():
     assert os.readlink(str(s.dane / 'b.com' / 'privkey.pem')) == \
                                         '../../le/live/b.com/privkey.pem'
 
-    retval = main.live_to_archive(prog)
+    retval = dane.live_to_archive(prog)
 
     assert retval == Prog.RetVal.ok
 
@@ -1633,7 +1633,7 @@ def test_5_2xx_only_already_up():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:212' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -1719,7 +1719,7 @@ def test_6_single_renewal_soft_fail():
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
 
-    retval = main.init_dane_directory(prog)
+    retval = dane.init_dane_directory(prog)
 
     assert retval == Prog.RetVal.ok
     assert s.dane.exists()
@@ -1736,7 +1736,7 @@ def test_6_single_renewal_soft_fail():
                                         '../../le/live/a.com/privkey.pem'
 
 
-    retval = main.live_to_archive(prog)
+    retval = dane.live_to_archive(prog)
 
     assert retval == Prog.RetVal.ok
 
@@ -1795,7 +1795,7 @@ def test_6_single_renewal_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -1860,7 +1860,7 @@ def test_6_single_renewal_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -1926,7 +1926,7 @@ def test_6_single_renewal_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
         # publish now succeeds, will not attempt to delete since we've only
         # just managed to publish a record
@@ -1991,7 +1991,7 @@ def test_6_single_renewal_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -2058,7 +2058,7 @@ def test_6_single_renewal_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns') ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -2131,7 +2131,7 @@ def test_7_single_renewal_2xx_up_soft_fail():
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
 
-    retval = main.init_dane_directory(prog)
+    retval = dane.init_dane_directory(prog)
 
     assert retval == Prog.RetVal.ok
     assert s.dane.exists()
@@ -2148,7 +2148,7 @@ def test_7_single_renewal_2xx_up_soft_fail():
                                         '../../le/live/a.com/privkey.pem'
 
 
-    retval = main.live_to_archive(prog)
+    retval = dane.live_to_archive(prog)
 
     assert retval == Prog.RetVal.ok
 
@@ -2208,7 +2208,7 @@ def test_7_single_renewal_2xx_up_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -2270,7 +2270,7 @@ def test_7_single_renewal_2xx_up_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -2329,7 +2329,7 @@ def test_7_single_renewal_2xx_up_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
         # publish now succeeds, will not attempt to delete since we've only
         # just managed to publish a record
@@ -2390,7 +2390,7 @@ def test_7_single_renewal_2xx_up_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -2447,7 +2447,7 @@ def test_7_single_renewal_2xx_up_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -2513,7 +2513,7 @@ def test_8_single_renewal_2xx_delayed_up_soft_fail():
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
 
-    retval = main.init_dane_directory(prog)
+    retval = dane.init_dane_directory(prog)
 
     assert retval == Prog.RetVal.ok
     assert s.dane.exists()
@@ -2530,7 +2530,7 @@ def test_8_single_renewal_2xx_delayed_up_soft_fail():
                                         '../../le/live/a.com/privkey.pem'
 
 
-    retval = main.live_to_archive(prog)
+    retval = dane.live_to_archive(prog)
 
     assert retval == Prog.RetVal.ok
 
@@ -2589,7 +2589,7 @@ def test_8_single_renewal_2xx_delayed_up_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -2655,7 +2655,7 @@ def test_8_single_renewal_2xx_delayed_up_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -2718,7 +2718,7 @@ def test_8_single_renewal_2xx_delayed_up_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
         # publish now succeeds, will not attempt to delete since we've only
         # just managed to publish a record
@@ -2779,7 +2779,7 @@ def test_8_single_renewal_2xx_delayed_up_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -2836,7 +2836,7 @@ def test_8_single_renewal_2xx_delayed_up_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -2902,7 +2902,7 @@ def test_9_multi_renewal_soft_fail():
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
 
-    retval = main.init_dane_directory(prog)
+    retval = dane.init_dane_directory(prog)
 
     assert retval == Prog.RetVal.ok
     assert s.dane.exists()
@@ -2919,7 +2919,7 @@ def test_9_multi_renewal_soft_fail():
                                         '../../le/live/a.com/privkey.pem'
 
 
-    retval = main.live_to_archive(prog)
+    retval = dane.live_to_archive(prog)
 
     assert retval == Prog.RetVal.ok
 
@@ -2979,7 +2979,7 @@ def test_9_multi_renewal_soft_fail():
     #for g in prog.data.groups:
     #    g.target.api.command = [ str(s.bin / 'dns') ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -3047,7 +3047,7 @@ def test_9_multi_renewal_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -3128,7 +3128,7 @@ def test_9_multi_renewal_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
                                                      '--fail-delete' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -3213,7 +3213,7 @@ def test_9_multi_renewal_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-publish',
                                                      '--fail-delete' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -3305,7 +3305,7 @@ def test_9_multi_renewal_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--not-up=311',
                                                      '--fail-publish' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -3395,7 +3395,7 @@ def test_9_multi_renewal_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -3472,7 +3472,7 @@ def test_9_multi_renewal_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--not-up=311' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -3550,7 +3550,7 @@ def test_9_multi_renewal_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns') ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -3619,7 +3619,7 @@ def test_10_multi_renewal_2xx_up_soft_fail():
     assert prog.dane_domain_directories == {}
     assert prog.renewed_domains == []
 
-    retval = main.init_dane_directory(prog)
+    retval = dane.init_dane_directory(prog)
 
     assert retval == Prog.RetVal.ok
     assert s.dane.exists()
@@ -3636,7 +3636,7 @@ def test_10_multi_renewal_2xx_up_soft_fail():
                                         '../../le/live/a.com/privkey.pem'
 
 
-    retval = main.live_to_archive(prog)
+    retval = dane.live_to_archive(prog)
 
     assert retval == Prog.RetVal.ok
 
@@ -3695,7 +3695,7 @@ def test_10_multi_renewal_2xx_up_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -3759,7 +3759,7 @@ def test_10_multi_renewal_2xx_up_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -3839,7 +3839,7 @@ def test_10_multi_renewal_2xx_up_soft_fail():
                                                      '--fail-delete',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -3934,7 +3934,7 @@ def test_10_multi_renewal_2xx_up_soft_fail():
                                                      '--fail-delete',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -4035,7 +4035,7 @@ def test_10_multi_renewal_2xx_up_soft_fail():
                                                      '--fail-publish',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -4126,7 +4126,7 @@ def test_10_multi_renewal_2xx_up_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--fail-delete',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.continue_failure
 
     retval = datafile.write_posthook(prog)
@@ -4203,7 +4203,7 @@ def test_10_multi_renewal_2xx_up_soft_fail():
         g.target.api.command = [ str(s.bin / 'dns'), '--not-up=311',
                                                      '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)
@@ -4268,7 +4268,7 @@ def test_10_multi_renewal_2xx_up_soft_fail():
     for g in prog.data.groups:
         g.target.api.command = [ str(s.bin / 'dns'), '--is-up=201:211' ]
 
-    retval = main.process_data(prog)
+    retval = dane.process_data(prog)
     assert retval == Prog.RetVal.ok
 
     retval = datafile.write_posthook(prog)

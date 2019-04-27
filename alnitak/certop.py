@@ -42,7 +42,6 @@ def get_live(usage, certs):
 
     raise Except.InternalError("suitable cert could not be found")
 
-
 def get_archive(usage, certs):
     """Return an archive certificate name from one of the prehook lines.
 
@@ -73,7 +72,6 @@ def get_archive(usage, certs):
             return cert
 
     raise Except.InternalError("suitable cert could not be found")
-
 
 def get_xive(usage, certs):
     """Return a live/archive certificate name from one of the prehook lines.
@@ -106,7 +104,6 @@ def get_xive(usage, certs):
 
     raise Except.InternalError("suitable cert could not be found")
 
-
 def read_cert(cert, tlsa_usage):
     """Return the PEM-encoded content of a certificate file.
 
@@ -116,7 +113,7 @@ def read_cert(cert, tlsa_usage):
 
     Args:
         cert (pathlib.Path): PEM-encoded file to read.
-        tlsa_usage (str): tlsa usage field
+        tlsa_usage (str): tlsa usage field.
 
     Returns:
         str: PEM-encoded content of 'cert' (with BEGIN and END headers and
@@ -188,8 +185,12 @@ def get_hash(selector, matching, data):
         InternalError: if generating the 'certificate data' fails for any
             reason.
     """
-    cert = x509.load_pem_x509_certificate(
+    try:
+        cert = x509.load_pem_x509_certificate(
                                     bytes(data, 'utf-8'), default_backend())
+    except ValueError as ex:
+        raise Except.InternalError(
+                "creating hash failed: {}".format(str(ex).lower()))
 
     try:
         if selector == '0':
@@ -223,6 +224,4 @@ def get_hash(selector, matching, data):
         raise Except.InternalError("unsupported hash algorithm")
     except TypeError:
         raise Except.InternalError("certificate data not a byte string")
-
-
 

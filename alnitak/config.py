@@ -309,4 +309,3 @@ def is_input_domain(prog, inp, tlsa):
         return True
     return False
 
-

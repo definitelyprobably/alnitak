@@ -9,32 +9,6 @@ from alnitak import exceptions as Except
 from alnitak import certop
 
 
-def arg_type(inp):
-    """Function to call in argparse when checking inputs to the '--print' flag.
-
-    Args:
-        inp (str): input string from the command-line parser.
-
-    Returns:
-        Record: object containing the tlsa parameters and certificate/domain
-            extracted from the input.
-
-    Raises:
-        argparse.ArgumentTypeError: if input does not conform.
-    """
-    if len(inp) < 5:
-        raise argparse.ArgumentTypeError("malformed input '{}': must be like 'XYZ:CERT'.".format(inp))
-    if inp[0] not in ['2', '3']:
-        raise argparse.ArgumentTypeError("usage value '{}' not recognized.".format(inp[0]))
-    if inp[1] not in ['0', '1']:
-        raise argparse.ArgumentTypeError("selector value '{}' not recognized.".format(inp[1]))
-    if inp[2] not in ['0', '1', '2']:
-        raise argparse.ArgumentTypeError("matching type value '{}' not recognized.".format(inp[2]))
-    if inp[3] != ':':
-        raise argparse.ArgumentTypeError("malformed input '{}': must be like 'XYZ:CERT'.".format(inp))
-    return Prog.Record(inp[:3], inp[4:])
-
-
 def populate_targets(prog):
     """Populate the target list with the print flag arguments.
 
@@ -43,7 +17,7 @@ def populate_targets(prog):
     prog.target_list. When the '--print' flag _is_ given arguments, we need
     to artificially populate prog.target_list with those arguments so that
     the code that follows that will process the data can operate. This is
-    that function. We will read prog.args.printrecord and put that data
+    that function. We will read prog.args.inputs and put that data
     into prog.target_list.
 
     Args:
@@ -52,18 +26,12 @@ def populate_targets(prog):
     Returns:
         Prog.RetVal.ok: always returned.
     """
-    # we don't run:
-    #   proto = { a for b in prog.args.printrecord for a in b }
-    # instead since that randomizes the order of the data requested.
-    # I would rather 'alnitak --print' not output different data every
-    # time it runs, even if the flags and arguments are identical.
-    # Hence, we will use the following longer code:
-    proto = []
-    for b in prog.args.printrecord:
-        for a in b:
-            if a not in proto:
-                proto += [ a ]
-    for p in proto:
+    #proto = []
+    #for b in prog.args.inputs:
+    #    for a in b:
+    #        if a not in proto:
+    #            proto += [ a ]
+    for p in prog.args.inputs:
         t = Prog.Target(p.cert)
         tlsa = Prog.Tlsa(p.params, None, None, None)
         tlsa.publish = False
@@ -74,6 +42,41 @@ def populate_targets(prog):
         prog.target_list += [ t ]
     return Prog.RetVal.ok
 
+def get_domain(prog, fpath):
+    """Return the domain from the input path.
+
+    Will extract a domain from the full path input (of a X.509 cert file)
+    as the Let's Encrypt directory the certificate is in, rather than, say,
+    the domain(s) defined in the certificate itself. Anything other than a
+    strict path format will cause a 'failure' to recognize a domain.
+
+    For example,
+        /etc/le/live/a.com/x.pem      -> 'a.com'  (success)
+        /etc/le/archive/a.com/x.pem   -> 'a.com'  (success)
+        /etc/le/live/x.pem            -> '-'      (failure)
+        /etc/le/live/a.com/dir/x.pem  -> '-'      (failure)
+        /etc/le/xyz/a.com/x.pem       -> '-'      (failure)
+        /etc/x.pem                    -> '-'      (failure)
+
+    Args:
+        prog (State): program state.
+        fpath (pathlib.Path): certificate path to process.
+
+    Returns:
+        str: either the domain in fpath or else '-'.
+    """
+    try:
+        if str(fpath).startswith(str(prog.letsencrypt_directory)):
+            parts = pathlib.Path(fpath).parts
+            le = len(prog.letsencrypt_directory.parts)
+            if len(parts) != le + 3:
+                return '-'
+            if parts[le] not in [ 'live', 'archive' ]:
+                return '-'
+            return parts[le+1]
+    except IndexError:
+        pass
+    return '-'
 
 def certificate_data(prog):
     """Given TLSA specifications, print their TLSA record data (hashes).
@@ -89,7 +92,7 @@ def certificate_data(prog):
             Prog.RetVal.exit_failure.
     """
     retval = Prog.RetVal.ok
-    prog.log.info1("+++ generating certificate data (hashes)...")
+    prog.log.info3("+++ generating certificate data (hashes)...")
     for target in prog.target_list:
         uniq = []
         for t in target.tlsa:
@@ -97,28 +100,32 @@ def certificate_data(prog):
                 continue
             uniq += [ t.params() ]
 
-            prog.log.info1(
+            prog.log.info3(
                     " ++ tlsa: {}{}{}, request: {}".format(t.usage, t.selector,
                                                            t.matching,
                                                            target.domain))
             try:
                 data = get_data(prog, target.domain, t)
                 for d in data:
-                    prog.log.info1(
+                    prog.log.info3(
                             "  + cert: {}\n  + data: {}".format(d[0], d[1]))
-                    if not (prog.log.quiet
-                                    or prog.log.type == Prog.LogType.stdout):
-                        print("{} {} {} {} {}".format(
-                                d[0], t.usage, t.selector, t.matching, d[1]))
+
+                    # The only time we _don't_ print this, is if we are
+                    # printing the log info to stdout and the debug level
+                    # is 'debug':
+                    if not (prog.log.type == Prog.LogType.stdout
+                                and prog.log.level == Prog.LogLevel.debug):
+                        print("{} {} {} {} {} {}".format(
+                                get_domain(prog, d[0]),
+                                t.usage, t.selector, t.matching, d[1], d[0]))
 
             except (Except.FunctionError, Except.InternalError,
                     Except.DNSProcessingError) as ex:
-                prog.log.error(ex.message)
+                prog.log.error("{}: {}".format(target.domain, ex.message))
                 retval = Prog.RetVal.exit_failure
                 continue
 
     return retval
-
 
 def get_data(prog, domain, tlsa):
     """Return certificate data (hashes) for the TLSA specs given.
@@ -160,7 +167,6 @@ def get_data(prog, domain, tlsa):
     return [ [ c, certop.get_hash(tlsa.selector, tlsa.matching,
                                   certop.read_cert(c, tlsa.usage)) ]
              for c in cert ]
-
 
 def try_as_file(inp):
     """Read the input and try to resolve it as an extant _file_.
@@ -207,7 +213,6 @@ def try_as_file(inp):
         raise Except.FunctionError("resolving file '{}' failed: {}".format(
                                                 file, ex.strerror.lower() ) )
     return None
-
 
 def try_as_domain(prog, inp):
     """Read the input and try to resolve it as an extant _directory_.
@@ -279,7 +284,6 @@ def try_as_domain(prog, inp):
         raise Except.FunctionError("resolving file '{}' failed: {}".format(
                                                 file, ex.strerror.lower() ) )
 
-
 def archive_groups(inp):
     """Create a list of related Let's Encrypt archive-like certificate files.
 
@@ -313,5 +317,4 @@ def archive_groups(inp):
                 nums += [ m.group(1) ]
     return [ [ c for c in inp if re.match(r'\w+{}\.pem$'.format(n), c.name) ]
              for n in nums ]
-
 

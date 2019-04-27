@@ -1,26 +1,26 @@
 
-class ConfigError(RuntimeError):
+class ConfigError(Exception):
     """Configuration file syntax errors."""
     def __init__(self, message=None):
         self.message = message
 
-class LockError(RuntimeError):
+class LockError(Exception):
     """Lock file errors."""
     def __init__(self, message=None):
         self.message = message
 
-class FunctionError(RuntimeError):
+class FunctionError(Exception):
     """Generic exception for function throws"""
     def __init__(self, message=None):
         self.message = message
 
-class InternalError(RuntimeError):
+class InternalError(Exception):
     """Internal errors."""
     def __init__(self, message=None):
         self.message = message
 
 
-class DNSExcept(RuntimeError):
+class DNSExcept(Exception):
     """Base class for exceptions raised in processing data."""
     def __init__(self, message=None):
         self.message = message
@@ -52,7 +52,7 @@ class DNSNoReturnError(DNSError):
     pass
 
 
-class PrivError(RuntimeError):
+class PrivError(Exception):
     """Exception for errors raised when dropping privileges."""
     def __init__(self, message=None):
         self.message = message

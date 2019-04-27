@@ -16,14 +16,18 @@ def tos(state, domain, params, name, num = None):
     sparams = str(params)
     data = state.hash[domain]['cert' + str(hn)][int(params)]
 
-    return "{} {} {} {} {}".format(p, sparams[0], sparams[1], sparams[2], data)
+    return "{} {} {} {} {} {}".format(
+            domain, sparams[0], sparams[1], sparams[2], data, p)
 
 
 def test_print1():
     s = setup.Init(keep=True)
 
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p'], stdout=PIPE, stderr=PIPE)
+    p = Popen(['alnitak', 'print', '-lno',
+                                   '-Lno',
+                                   '-c', str(s.config),
+                                   '-C', str(s.le)],
+              stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
     cdata = stdout.decode('ascii').splitlines()
@@ -62,8 +66,11 @@ def test_print1():
 def test_print2():
     s = setup.Init(keep=True)
 
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config1), '-C', str(s.le),
-               '-p'], stdout=PIPE, stderr=PIPE)
+    p = Popen(['alnitak', 'print', '-lno',
+                                   '-Lno',
+                                   '-c', str(s.config1),
+                                   '-C', str(s.le)],
+              stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
     cdata = stdout.decode('ascii').splitlines()
@@ -118,8 +125,12 @@ def test_print2():
 def test_print3():
     s = setup.Init(keep=True)
 
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p', '200:b.com'], stdout=PIPE, stderr=PIPE)
+    p = Popen(['alnitak', 'print', '-lno',
+                                   '-Lno',
+                                   '-c', str(s.config),
+                                   '-C', str(s.le),
+                                   '200:b.com'],
+              stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
     cdata = stdout.decode('ascii').splitlines()
@@ -139,186 +150,30 @@ def test_print3():
 def test_print4():
     s = setup.Init(keep=True)
 
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p', '201:b.com', '-p'], stdout=PIPE, stderr=PIPE)
-
-    stdout, stderr = p.communicate(timeout=300)
-    cdata = stdout.decode('ascii').splitlines()
-
-    assert p.returncode == prog.RetVal.ok.value
-
-    assert len(stdout) > 0
-    assert len(stderr) == 0
-
-    assert ( tos(s, 'b.com', 201, 'chain') in cdata or
-             tos(s, 'b.com', 201, 'fullchain') in cdata )
-
-    assert len(cdata) == 1
-
-
-
-def test_print5():
-    s = setup.Init(keep=True)
-
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p', '-p', '202:b.com'], stdout=PIPE, stderr=PIPE)
-
-    stdout, stderr = p.communicate(timeout=300)
-    cdata = stdout.decode('ascii').splitlines()
-
-    assert p.returncode == prog.RetVal.ok.value
-
-    assert len(stdout) > 0
-    assert len(stderr) == 0
-
-    assert ( tos(s, 'b.com', 202, 'chain') in cdata or
-             tos(s, 'b.com', 202, 'fullchain') in cdata )
-
-    assert len(cdata) == 1
-
-
-
-def test_print6():
-    s = setup.Init(keep=True)
-
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p210:b.com'], stdout=PIPE, stderr=PIPE)
-
-    stdout, stderr = p.communicate(timeout=300)
-    cdata = stdout.decode('ascii').splitlines()
-
-    assert p.returncode == prog.RetVal.ok.value
-
-    assert len(stdout) > 0
-    assert len(stderr) == 0
-
-    assert ( tos(s, 'b.com', 210, 'chain') in cdata or
-             tos(s, 'b.com', 210, 'fullchain') in cdata )
-
-    assert len(cdata) == 1
-
-
-
-def test_print7():
-    s = setup.Init(keep=True)
-
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p211:b.com', '-p'], stdout=PIPE, stderr=PIPE)
-
-    stdout, stderr = p.communicate(timeout=300)
-    cdata = stdout.decode('ascii').splitlines()
-
-    assert p.returncode == prog.RetVal.ok.value
-
-    assert len(stdout) > 0
-    assert len(stderr) == 0
-
-    assert ( tos(s, 'b.com', 211, 'chain') in cdata or
-             tos(s, 'b.com', 211, 'fullchain') in cdata )
-
-    assert len(cdata) == 1
-
-
-
-def test_print8():
-    s = setup.Init(keep=True)
-
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p', '-p212:b.com'], stdout=PIPE, stderr=PIPE)
-
-    stdout, stderr = p.communicate(timeout=300)
-    cdata = stdout.decode('ascii').splitlines()
-
-    assert p.returncode == prog.RetVal.ok.value
-
-    assert len(stdout) > 0
-    assert len(stderr) == 0
-
-    assert ( tos(s, 'b.com', 212, 'chain') in cdata or
-             tos(s, 'b.com', 212, 'fullchain') in cdata )
-
-    assert len(cdata) == 1
-
-
-
-def test_print9():
-    s = setup.Init(keep=True)
-
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-        '-p300:b.com', '-p', '301:b.com'], stdout=PIPE, stderr=PIPE)
-
-    stdout, stderr = p.communicate(timeout=300)
-    cdata = stdout.decode('ascii').splitlines()
-
-    assert p.returncode == prog.RetVal.ok.value
-
-    assert len(stdout) > 0
-    assert len(stderr) == 0
-
-    assert ( tos(s, 'b.com', 300, 'cert') in cdata or
-             tos(s, 'b.com', 300, 'fullchain') in cdata )
-    assert ( tos(s, 'b.com', 301, 'cert') in cdata or
-             tos(s, 'b.com', 301, 'fullchain') in cdata )
-
-    assert len(cdata) == 2
-
-
-
-def test_print10():
-    s = setup.Init(keep=True)
-
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p302:b.com', '-p', '310:b.com', '311:b.com',
-               '-p', '312:b.com'],
-               stdout=PIPE, stderr=PIPE)
-
-    stdout, stderr = p.communicate(timeout=300)
-    cdata = stdout.decode('ascii').splitlines()
-
-    assert p.returncode == prog.RetVal.ok.value
-
-    assert len(stdout) > 0
-    assert len(stderr) == 0
-
-    assert ( tos(s, 'b.com', 302, 'cert') in cdata or
-             tos(s, 'b.com', 302, 'fullchain') in cdata )
-    assert ( tos(s, 'b.com', 310, 'cert') in cdata or
-             tos(s, 'b.com', 310, 'fullchain') in cdata )
-    assert ( tos(s, 'b.com', 311, 'cert') in cdata or
-             tos(s, 'b.com', 311, 'fullchain') in cdata )
-    assert ( tos(s, 'b.com', 312, 'cert') in cdata or
-             tos(s, 'b.com', 312, 'fullchain') in cdata )
-
-    assert len(cdata) == 4
-
-
-
-def test_print11():
-    s = setup.Init(keep=True)
-
     cwd = Path.cwd()
 
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p',
-               '-p', '200:live/c.com',
-               '-p', '201:archive/c.com',
-               '-p202:{}/{}/c.com'.format(cwd, s.live),
-               '-p', '210:{}/{}/c.com/chain2.pem'.format(cwd, s.archive),
-                     '211:{}/{}/c.com'.format(cwd, s.archive),
-               '-p', '212:{}/{}/c.com/fullchain.pem'.format(cwd, s.live),
-               '-p', '300:live/c.com/fullchain.pem',
-               '-p', '301:live/c.com',
-               '-p', '302:live/c.com/cert.pem',
-               '-p', '310:archive/c.com/fullchain1.pem',
-               '-p', '311:archive/c.com',
-               '-p', '312:archive/c.com/cert1.pem',
-               '-p', '-p'],
-               stdout=PIPE, stderr=PIPE)
+    p = Popen(['alnitak', 'print', '-lno',
+                                   '-Lno',
+                                   '-c', str(s.config),
+                                   '-C', str(s.le),
+                                   '200:live/c.com',
+                                   '201:archive/c.com',
+                                   '202:{}/{}/c.com'.format(cwd, s.live),
+                                   '210:{}/{}/c.com/chain2.pem'.format(
+                                                            cwd, s.archive),
+                                   '211:{}/{}/c.com'.format(cwd, s.archive),
+                                   '212:{}/{}/c.com/fullchain.pem'.format(
+                                                            cwd, s.live),
+                                   '300:live/c.com/fullchain.pem',
+                                   '301:live/c.com',
+                                   '302:live/c.com/cert.pem',
+                                   '310:archive/c.com/fullchain1.pem',
+                                   '311:archive/c.com',
+                                   '312:archive/c.com/cert1.pem'],
+              stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
     cdata = stdout.decode('ascii').splitlines()
-
-    print(cdata)
 
     assert p.returncode == prog.RetVal.ok.value
 
@@ -371,34 +226,33 @@ def test_print11():
 
 
 
-def test_print12():
+def test_print5():
     s = setup.Init(keep=True)
 
     cwd = Path.cwd()
 
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p',
-               '-p', '300:live/a.com',
-
-               '301:archive/a.com',
-
-               '302:live/a.com/cert.pem',
-               '310:live/a.com/fullchain.pem',
-               '311:archive/a.com/cert2.pem',
-               '312:archive/a.com/fullchain3.pem',
-
-               '300:{}/{}/b.com/cert.pem'.format(cwd, s.live),
-               '301:{}/{}/b.com/fullchain.pem'.format(cwd, s.live),
-               '302:{}/{}/b.com/cert3.pem'.format(cwd, s.archive),
-               '310:{}/{}/b.com/fullchain2.pem'.format(cwd, s.archive),
-
-               '-p', '-p'],
-               stdout=PIPE, stderr=PIPE)
+    p = Popen(['alnitak', 'print', '-lno',
+                                   '-Lno',
+                                   '-c', str(s.config),
+                                   '-C', str(s.le),
+                                   '300:live/a.com',
+                                   '301:archive/a.com',
+                                   '302:live/a.com/cert.pem',
+                                   '310:live/a.com/fullchain.pem',
+                                   '311:archive/a.com/cert2.pem',
+                                   '312:archive/a.com/fullchain3.pem',
+                                   '300:{}/{}/b.com/cert.pem'.format(
+                                                            cwd, s.live),
+                                   '301:{}/{}/b.com/fullchain.pem'.format(
+                                                            cwd, s.live),
+                                   '302:{}/{}/b.com/cert3.pem'.format(
+                                                            cwd, s.archive),
+                                   '310:{}/{}/b.com/fullchain2.pem'.format(
+                                                            cwd, s.archive)],
+              stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
     cdata = stdout.decode('ascii').splitlines()
-
-    print(cdata)
 
     assert p.returncode == prog.RetVal.ok.value
 
@@ -434,16 +288,16 @@ def test_printX1():
 
     cwd = Path.cwd()
 
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p',
-               '-p300:{}/{}/a.com/cert.pem'.format(cwd, s.archive),
-               '-p', '-p'],
-               stdout=PIPE, stderr=PIPE)
+    p = Popen(['alnitak', 'print', '-lno',
+                                   '-Lno',
+                                   '-c', str(s.config),
+                                   '-C', str(s.le),
+                                   '300:{}/{}/a.com/cert.pem'.format(
+                                                            cwd, s.archive)],
+              stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
     cdata = stdout.decode('ascii').splitlines()
-
-    print(cdata)
 
     assert p.returncode == prog.RetVal.exit_failure.value
 
@@ -457,16 +311,15 @@ def test_printX2():
 
     cwd = Path.cwd()
 
-    p = Popen(['alnitak', '-lno', '-Lno', '-c', str(s.config), '-C', str(s.le),
-               '-p',
-               '-p300:{}/{}'.format(cwd, s.archive),
-               '-p', '-p'],
-               stdout=PIPE, stderr=PIPE)
+    p = Popen(['alnitak', 'print', '-lno',
+                                   '-Lno',
+                                   '-c', str(s.config),
+                                   '-C', str(s.le),
+                                   '300:{}/{}'.format(cwd, s.archive)],
+              stdout=PIPE, stderr=PIPE)
 
     stdout, stderr = p.communicate(timeout=300)
     cdata = stdout.decode('ascii').splitlines()
-
-    print(cdata)
 
     assert p.returncode == prog.RetVal.exit_failure.value
 

@@ -1,3 +1,4 @@
+
 import sys
 from enum import Enum
 import pathlib
@@ -7,6 +8,9 @@ import fcntl
 
 from alnitak import exceptions as Except
 import alnitak
+
+# FIXME: log errors that go to stdout need to be prefixed with the program
+#        name, but the errors going to the log file must not.
 
 
 class State:
@@ -36,8 +40,8 @@ class State:
             name.
         tlsa_protocol_regex (str): regex that specifies a valid TLSA
             protocol.
+        ttl_max (int): maximum allowed value for the '--ttl' flag.
         timenow (datetime.datetime): UTC time right now.
-        ttl_min (int): the minimum allowed input to the '--ttl' flag.
         testing_mode (bool): normally 'False'. If set to 'True', then
             root-only processes are not run. This is just performing a
             chown on any files (e.g. the datafile).
@@ -87,8 +91,8 @@ class State:
         self.tlsa_parameters_regex = r"[23][01][012]"
         self.tlsa_domain_regex = r"((\w[a-zA-Z0-9-]*\w|\w+)\.)+\w+"
         self.tlsa_protocol_regex = r"\w+"
+        self.ttl_max = 7*24*60*60
         self.timenow = datetime.datetime.utcnow()
-        self.ttl_min = 0 # FIXME: leave me? Set to something like 60?
         self.testing_mode = testing
         self.datafile = ( pathlib.Path("/var")
                                     / self.name / str(self.name + ".data") )
@@ -182,8 +186,7 @@ class State:
 
         return ret
 
-    def init_logging(self, args):
-        self.args = args
+    def init_logging(self):
         self.log.init(self.name, self.version, self.timenow)
 
     def make_absolute(self, path):
@@ -246,6 +249,7 @@ class Log():
     12. flags: -lno -q -Lno  errors ->X
 
     Attributes:
+        name (str): the program name.
         type (LogType): whether we are logging to a file, stdout or not
             logging at all.
         file (pathlib.Path): the logfile.
@@ -290,6 +294,7 @@ class Log():
             'error_handler_available' attribute).
     """
     def __init__(self, name, file):
+        self.name = name
         self.type = LogType.logfile
         self.file = pathlib.Path(file)
         self.level = LogLevel.normal

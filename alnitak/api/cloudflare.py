@@ -259,7 +259,8 @@ def cloudflare_fallback_delete(prog, api, tlsa, id):
     prog.log.info3("  + HTTP response: {}".format(r.status_code))
 
     response = r.json()
-    prog.log.info3("  + JSON response: {}".format(response))
+    prog.log.info3("  + JSON response: {}".format(
+                        str(response).replace(api.key, '<redacted>')) )
 
     errors = get_errors(response)
     if errors:
@@ -381,7 +382,8 @@ def cloudflare_fallback_publish(prog, api, tlsa, hash):
     prog.log.info3("  + HTTP response: {}".format(r.status_code))
 
     response = r.json()
-    prog.log.info3("  + JSON response: {}".format(response))
+    prog.log.info3("  + JSON response: {}".format(
+                                str(response).replace(api.key, '<redacted>')) )
 
     errors = get_errors(response)
 
@@ -474,7 +476,8 @@ def cloudflare_native_read(prog, api, tlsa):
                     "name": "_{}._{}.{}".format(tlsa.port, tlsa.protocol,
                                                 tlsa.domain)
                     })
-        prog.log.info3("  + JSON response: {}".format(records))
+        prog.log.info3("  + JSON response: {}".format(
+                                str(records).replace(api.key, '<redacted>')) )
         prog.log.info2("  + retrieving records: success")
     except CloudFlareAPIError as exc:
         if len(exc) > 0:
@@ -548,7 +551,8 @@ def cloudflare_fallback_read(prog, api, tlsa):
     prog.log.info3("  + HTTP response: {}".format(r.status_code))
 
     response = r.json()
-    prog.log.info3("  + JSON response: {}".format(response))
+    prog.log.info3("  + JSON response: {}".format(
+                                str(response).replace(api.key, '<redacted>')) )
 
     errors = get_errors(response)
     if errors:

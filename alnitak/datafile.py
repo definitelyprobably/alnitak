@@ -110,7 +110,6 @@ def read(prog):
     prog.log.info3(prog.data)
     return retval
 
-
 def check_data(prog):
     """Validate the data (from the datafile) in the internal program state.
 
@@ -162,7 +161,6 @@ def check_data(prog):
         prog.log.info3("  + datafile ok")
 
     return retval
-
 
 def write_prehook(prog):
     """Write to datafile based on prehook mode operation ('prehook lines').
@@ -240,7 +238,6 @@ def write_prehook(prog):
 
     return Prog.RetVal.ok
 
-
 def write_posthook(prog):
     """Write to datafile based on posthook mode operation ('posthook lines').
 
@@ -314,7 +311,6 @@ def write_posthook(prog):
 
     return Prog.RetVal.ok
 
-
 def remove(prog):
     """Remove the datafile, if it exists.
 
@@ -339,7 +335,6 @@ def remove(prog):
         return Prog.RetVal.exit_failure
 
     return Prog.RetVal.ok
-
 
 def fix_permissions(prog):
     """Ensure the datafile has the correct permissions.
@@ -374,5 +369,4 @@ def fix_permissions(prog):
         return True
 
     return False
-
 
