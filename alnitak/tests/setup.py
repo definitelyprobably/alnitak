@@ -1212,7 +1212,7 @@ def create_state_obj(init=None, config=None, recreate=True, lock=False,
 
     prog.lockfile = Path(init.varlock / 'alnitak.lock')
 
-    prog.log.set_level(Prog.LogLevel.nolog)
+    prog.log.set_no_logging()
     prog.recreate_dane = recreate
 
     if init:
@@ -1229,7 +1229,7 @@ def create_state_obj(init=None, config=None, recreate=True, lock=False,
 
     if log:
         prog.log.set_file(init.varlog / 'log')
-        prog.log.set_level(Prog.LogLevel.debug)
+        prog.log.set_debug_logging()
     else:
         prog.log.set_nolog()
     

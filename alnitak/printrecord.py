@@ -7,6 +7,7 @@ import pathlib
 from alnitak import prog as Prog
 from alnitak import exceptions as Except
 from alnitak import certop
+from alnitak import logging
 
 
 def populate_targets(prog):
@@ -113,8 +114,8 @@ def certificate_data(prog):
                     # The only time we _don't_ print this, is if we are
                     # printing the log info to stdout and the debug level
                     # is 'debug':
-                    if not (prog.log.type == Prog.LogType.stdout
-                                and prog.log.level == Prog.LogLevel.debug):
+                    if not (prog.log.type == logging.LogType.stdout
+                                and prog.log.level == logging.LogLevel.debug):
                         print("{} {} {} {} {} {}".format(
                                 get_domain(prog, d[0]),
                                 t.usage, t.selector, t.matching, d[1], d[0]))

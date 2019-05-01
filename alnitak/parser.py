@@ -9,6 +9,7 @@ from alnitak import config
 from alnitak import datafile
 from alnitak import printrecord
 from alnitak import dane
+from alnitak import logging
 
 
 
@@ -952,7 +953,7 @@ def parse_args(prog):
 
     # must set 'prog.log.quiet' before the other 'prog.log' details.
     if p.has('q'):
-        prog.log.quiet = True
+        prog.log.set_quiet()
 
     log = p.has('l')
     if log:
@@ -969,11 +970,11 @@ def parse_args(prog):
     loglevel = p.has('L')
     if loglevel:
         if loglevel == 'verbose':
-            prog.log.set_level(Prog.LogLevel.verbose)
+            prog.log.set_verbose_logging()
         elif loglevel == 'debug':
-            prog.log.set_level(Prog.LogLevel.debug)
+            prog.log.set_debug_logging()
         elif loglevel == 'no':
-            prog.log.set_level(Prog.LogLevel.nolog)
+            prog.log.set_no_logging()
 
     dd = p.has('D')
     if dd:
@@ -990,8 +991,9 @@ def parse_args(prog):
 
     if p.is_mode('print'):
         # do not log anything below 'debug':
-        if prog.log.level in [Prog.LogLevel.normal, Prog.LogLevel.verbose]:
-            prog.log.set_level(Prog.LogLevel.nolog)
+        if prog.log.level in [logging.LogLevel.normal,
+                              logging.LogLevel.verbose]:
+            prog.log.set_no_logging()
 
         # FIXME: need to remove duplicates in args.printrecord, not just
         #        identical entries but also 311:a.com and 311:live/a.com

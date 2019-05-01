@@ -2,15 +2,13 @@
 import sys
 from enum import Enum
 import pathlib
-import logging
 import datetime
 import fcntl
 
 from alnitak import exceptions as Except
+from alnitak import logging
 import alnitak
 
-# FIXME: log errors that go to stdout need to be prefixed with the program
-#        name, but the errors going to the log file must not.
 
 
 class State:
@@ -107,7 +105,8 @@ class State:
         self.letsencrypt_directory = pathlib.Path("/etc/letsencrypt")
         self.letsencrypt_live_directory = self.letsencrypt_directory / "live"
         self.ttl = 86400
-        self.log = Log(file="/var/log/{}.log".format(self.name), name=self.name)
+        self.log = logging.Log(self.name, self.version, self.timenow,
+                               "/var/log/{}.log".format(self.name))
         self.recreate_dane = False
 
         ## the following are data objects filled in during operation of the
@@ -186,9 +185,6 @@ class State:
 
         return ret
 
-    def init_logging(self):
-        self.log.init(self.name, self.version, self.timenow)
-
     def make_absolute(self, path):
         p = pathlib.Path(path)
         if p.is_absolute():
@@ -208,340 +204,6 @@ class State:
     def set_config_file(self, path):
         self.config = self.make_absolute(path)
 
-
-class LogType(Enum):
-    """Where to log to, if at all."""
-    logfile = 0
-    stdout = 1
-    no = 3
-
-class LogLevel(Enum):
-    """Logging level."""
-    nolog = 0
-    normal = 1
-    verbose = 2
-    debug = 3
-
-class Log():
-    """Class to control logging of information.
-
-    Logging schenarios:
-    1.  flags: <NONE>        info   -> logfile
-                             errors -> logfile, stderr
-    2.  flags: -l-           info   -> stdout
-                             errors -> stderr
-    3.  flags: -lno          info   ->X
-                             errors -> stderr
-    4.  flags: -q            info   -> logfile
-                             errors -> logfile
-    5.  flags: -l- -q        info   ->X
-    6.  flags: -lno -q       errors ->X
-
-    7.  flags: -Lno          info   ->X
-                             errors -> logfile, stderr
-    8.  flags: -l- -Lno      info   ->X
-                             errors -> stderr
-    9.  flags: -lno -Lno     info   ->X
-                             errors -> stderr
-    10. flags: -q -Lno       info   ->X
-                             errors -> logfile
-    11. flags: -l- -q -Lno   info   ->X
-    12. flags: -lno -q -Lno  errors ->X
-
-    Attributes:
-        name (str): the program name.
-        type (LogType): whether we are logging to a file, stdout or not
-            logging at all.
-        file (pathlib.Path): the logfile.
-        level (LogLevel): the level of info to log.
-        quiet (bool): whether the '--quiet' flag was given or not. If set
-            to 'True', then absolutely no messages are printed, not even
-            error messages.
-        log_info: the Logger for info messages.
-        log_err: the Logger for error messages.
-        logfile_checked (bool): when we write to a logfile, we need to do
-            some checks on the file. If set to 'True', we don't bother
-            running the checks again. We also use this bool to tell if we
-            are writing to a logfile since it is only ever 'True' if
-            writing to a logfile has been requested (and hence, a check
-            was requested in the first place).
-        error_handler_available (bool): set to 'True' if there is an
-            available output for error messages. This will only be set if
-            both: the logging flags to the program made available an
-            error stream AND at least one stream was initiaized without
-            errors. Note: a value of 'True' does NOT mean all the error
-            streams were initialized successfully: only that at least one
-            was.
-        error_msg (list(str)): error messages for output streams that
-            failed initialization. The reason why these are stored and not
-            just printed to the screen is precisely because some streams
-            failed to initialize: where we need to print these error
-            messages (if we can do so at all) depends on what streams are
-            actually availabale. The streams that have failed are marked
-            in the following fail_X attributes...
-        fail_error_logfile (bool): set to 'True' if the error stream to
-            the logfile was not initialized without errors.
-        fail_error_stderr (bool): set to 'True' if the error stream to
-            stderr was not initialized without errors.
-        fail_info_logfile (bool): set to 'True' if the info stream to
-            the logfile was not initialized without errors.
-        fail_info_stdout (bool): set to 'True' if the info stream to
-            stdout was not initialized without errors.
-        fail_output (bool): set to 'True' if printing to a stream (info
-            or error) encountered an error AFTER it was successfully
-            initialized. When this occurs, we simply print an error to
-            the error stream, if one is available (c.f. the
-            'error_handler_available' attribute).
-    """
-    def __init__(self, name, file):
-        self.name = name
-        self.type = LogType.logfile
-        self.file = pathlib.Path(file)
-        self.level = LogLevel.normal
-        self.quiet = False
-
-        self.log_info = logging.getLogger("{}:out".format(name))
-        self.log_err = logging.getLogger("{}:err".format(name))
-        self.log_info.setLevel(logging.INFO)
-        self.log_err.setLevel(logging.INFO)
-        self.logfile_checked = False
-
-        self.error_handler_available = False
-        self.error_msg = []
-        self.fail_error_logfile = False
-        self.fail_error_stderr = False
-        self.fail_info_logfile = False
-        self.fail_info_stdout = False
-        self.fail_output = False
-
-    def __str__(self):
-        if self.type == LogType.logfile:
-            return "[{}] [q:{}] {}".format(self.level, self.quiet, self.file)
-        elif self.ttpe == LogType.stdout:
-            return "[{}] [q:{}] {}".format(self.level, self.quiet, self.type)
-        else:
-            return "{}".format(self.type)
-
-    def set_file(self, file):
-        self.type = LogType.logfile
-        self.file = pathlib.Path(file)
-
-    def set_stdout(self):
-        self.type = LogType.stdout
-        self.file = sys.stdout
-
-    def set_nolog(self):
-        self.type = LogType.no
-        self.file = None
-
-    def set_level(self, level):
-        self.level = level
-
-    def set_quiet(self):
-        self.quiet = True
-
-    def has_errors(self):
-        return (self.fail_output or self.fail_error_logfile
-                or self.fail_error_stderr or self.fail_info_logfile
-                or self.fail_info_stdout)
-
-    def init(self, progname, progversion, timenow):
-        """Initialize the logging handlers."""
-
-        # set the error handler:
-        if self.quiet:
-            if self.type == LogType.logfile:
-                self.error_handler_file(progname)
-        else:
-            self.error_handler_stderr()
-            if self.type == LogType.logfile:
-                self.error_handler_file(progname)
-
-        # set the info handler:
-        if self.quiet:
-            if self.type == LogType.logfile:
-                self.info_handler_file(progname)
-        else:
-            if self.type == LogType.logfile:
-                self.info_handler_file(progname)
-            elif self.type == LogType.stdout:
-                self.info_handler_stdout()
-
-        # now, if any of the handlers above have failed, then we need to
-        # try to print an error message.
-        if (not self.fail_info_logfile and not self.fail_info_stdout
-            and self.logfile_checked):
-                self.write_header(progname, progversion, timenow)
-
-        if (self.fail_error_logfile or self.fail_error_stderr
-                or self.fail_info_logfile or self.fail_info_stdout):
-            if self.error_handler_available:
-                self.error(self.error_msg)
-                self.error("logging may be incomplete")
-
-
-    def write_header(self, progname, progversion, timenow):
-        # create header section for the logfile
-        arg_str = sys.argv[0]
-        for a in sys.argv[1:]:
-            if ' ' in a or '\t' in a or '\n' in a:
-                arg_str += " '{}'".format(a)
-            else:
-                arg_str += " {}".format(a)
-        self.info1("---------------------------------------------\n{0} {1}\n{2} ({2:%s})\nprogram run as: {3}\n---------------------------------------------".format(progname, progversion, timenow, arg_str))
-
-
-    def info_handler_file(self, progname):
-        if self.check_logfile(progname):
-            self.fail_info_logfile = True
-            return True
-        try:
-            handler = logging.FileHandler(str(self.file))
-            handler.setFormatter( logging.Formatter('%(message)s') )
-            self.log_info.addHandler(handler)
-        except OSError as ex:
-            self.error_msg += [
-                    "creating handler to logfile '{}' failed: {}".format(
-                                            ex.filename, ex.strerror.lower()) ]
-            self.fail_info_logfile = True
-            return True
-        return False
-
-
-    def info_handler_stdout(self):
-        try:
-            handler = logging.StreamHandler(sys.stdout)
-            handler.setFormatter( logging.Formatter('%(message)s') )
-            self.log_info.addHandler(handler)
-        except OSError as ex:
-            self.error_msg += [
-                    "creating handler to stdout failed: {}".format(
-                                                        ex.strerror.lower()) ]
-            self.fail_info_stdout = True
-            return True
-        return False
-
-
-    def error_handler_file(self, progname):
-        if self.check_logfile(progname):
-            self.fail_error_logfile = True
-            return True
-        try:
-            handler = logging.FileHandler(str(self.file))
-            handler.setFormatter( logging.Formatter('%(message)s') )
-            self.log_err.addHandler(handler)
-        except OSError as ex:
-            self.error_msg += [
-                    "creating handler to logfile '{}' failed: {}".format(
-                                            ex.filename, ex.strerror.lower()) ]
-            self.fail_error_logfile = True
-            return True
-
-        self.error_handler_available = True
-        return False
-
-
-    def error_handler_stderr(self):
-        try:
-            handler = logging.StreamHandler(sys.stderr)
-            handler.setFormatter( logging.Formatter('%(message)s') )
-            self.log_err.addHandler(handler)
-        except OSError as ex:
-            self.error_msg += [
-                    "creating handler to stderr failed: {}".format(
-                                                        ex.strerror.lower()) ]
-            self.fail_error_stderr = True
-            return True
-
-        self.error_handler_available = True
-        return False
-
-
-    def check_logfile(self, progname):
-        if self.logfile_checked:
-            return False
-        self.logfile_checked = True
-
-        if self.file.is_dir():
-            self.file = self.file / "{}.log".format(progname)
-
-        try:
-            self.file = self.file.resolve()
-        except FileNotFoundError as ex:
-            pass
-            # we'll catch the parent directory not existing next. We don't
-            # want to exit here if the log file itself doesn't exist.
-        except RuntimeError as ex:
-            self.error_msg += [
-                    "log file '{}': file could not be resolved".format(
-                                                                ex.filename) ]
-            return True
-
-        if not self.file.parent.exists():
-            self.error_msg += [ "logging: directory '{}' not found".format(
-                                                            self.file.parent) ]
-            return True
-
-        return False
-
-
-    def printmsg(self, msg, level):
-        try:
-            if self.quiet and self.type == LogType.logfile:
-                if level.value <= self.level.value:
-                    self.log_info.info(msg)
-            elif self.type != LogType.no:
-                if level.value <= self.level.value:
-                    self.log_info.info(msg)
-        except OSError as ex:
-            self.fail_output = True
-            if self.error_handler_available:
-                self.error("writing log info failed: {}".format(
-                                                    ex.strerror.lower()) )
-
-    def info1(self, msg):
-        self.printmsg(msg, LogLevel.normal)
-
-    def info2(self, msg):
-        self.printmsg(msg, LogLevel.verbose)
-
-    def info3(self, msg):
-        self.printmsg(msg, LogLevel.debug)
-
-    def error(self, msg):
-        if isinstance(msg, str):
-            lines = msg.splitlines()
-        else:
-            lines = msg
-        for l in lines:
-            try:
-                if self.quiet:
-                    if self.type == LogType.logfile:
-                        self.log_err.info("error: {}".format(l))
-                else:
-                    self.log_err.info("error: {}".format(l))
-            except OSError:
-                self.fail_output = True
-
-
-    def warning(self, msg):
-        if isinstance(msg, str):
-            lines = msg.splitlines()
-        else:
-            lines = msg
-        for l in lines:
-            try:
-                if self.quiet:
-                    if self.type == LogType.logfile:
-                        self.log_err.info("warning: {}".format(l))
-                else:
-                    self.log_err.info("warning: {}".format(l))
-            except OSError:
-                self.fail_output = True
-
-
-
-
 class RetVal(Enum):
     """Exit code values."""
     ok = 0
@@ -549,8 +211,6 @@ class RetVal(Enum):
     exit_failure = 1
     continue_failure = 257
     config_failure = 3
-
-
 
 class Api:
     """API scheme base class.
@@ -650,13 +310,10 @@ class ApiExec(Api):
     def __hash__(self):
         return super().__hash__()
 
-
 class ApiType(Enum):
     """The API scheme."""
     exec = 'exec'
     cloudflare = 'cloudflare'
-
-
 
 class Record:
     """Class to record the inputs to the '--print' flag.
@@ -677,7 +334,6 @@ class Record:
 
     def __str__(self):
         return "  params: {}\n  cert: {}".format(self.params, self.cert)
-
 
 class Tlsa:
     """Class recording the data of a TLSA record.
@@ -728,7 +384,6 @@ class Tlsa:
     def publish_off(self):
         self.publish = False
 
-
 class Cert:
     """A set of corresponding live, archive and dane certificates.
 
@@ -754,7 +409,6 @@ class Cert:
     def pstr(self):
         return "  + dane: {}\n  + live: {}\n  + archive: {}".format(
                                             self.dane, self.live, self.archive)
-
 
 class Target:
     """A config file target.
@@ -808,7 +462,6 @@ class Target:
     def add_cert(self, dane, live, archive):
         self.certs += [ Cert(dane, live, archive) ]
 
-
 class ConfigState:
     """Class to record syntax errors in the config file.
 
@@ -830,8 +483,6 @@ class ConfigState:
             prog.log.error("config file: line {}: {}".format(self.linepos, msg))
         else:
             prog.log.error("config file: {}".format(msg))
-
-
 
 class DataLine:
     """Base class for datalines.
@@ -1057,7 +708,6 @@ class DataGroup:
             return
         self.special += [ line ]
 
-
 class Data:
     """Class to record all the data in the datafile.
 
@@ -1083,5 +733,4 @@ class Data:
         for g in self.groups:
             ret += "\n{}".format(g)
         return ret
-
 
