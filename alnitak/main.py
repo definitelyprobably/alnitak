@@ -22,7 +22,7 @@ def create_lock(prog):
                           prog.name))
                 except OSError:
                     prog.log.output.stdout_failure = True
-            exit(prog, 32, False)
+            exit(prog, 15, False)
     except Except.LockError as ex:
         if not prog.args.has('q'):
             try:

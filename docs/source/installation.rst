@@ -1,4 +1,6 @@
 
+.. _Installation:
+
 Installation
 ============
 
@@ -9,7 +11,18 @@ The program's specific dependencies are:
 * requests >= 2.21.0
 * cryptography >= 2.4.2
 
-Older version may also work.
+Older version may also work, but have not been tested.
+
+If your DNS records are managed by Cloudflare, then *alnitak* can use their
+native API package,
+`python-cloudflare <https://github.com/cloudflare/python-cloudflare>`_
+in order to manage DNS records. This is not required, but is recommended;
+install the package via pip as::
+
+    ~$ pip install cloudflare
+
+and *alnitak* will use it automatically (and fall back to requests calls
+otherwise).
 
 The program has been tested on Debian (Jessie and Stretch).
 It should work for all Unix-like systems, or at least all systems that provide
@@ -29,7 +42,8 @@ either into a virtual environment or system-wide.
 From Source
 ###########
 
-Source can be downloaded from `github <https://github.com/definitelyprobably/alnitak>`_::
+Source can be downloaded from
+`github <https://github.com/definitelyprobably/alnitak>`_::
 
     ~$ git clone https://github.com/definitelyprobably/alnitak
 

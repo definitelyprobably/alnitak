@@ -30,6 +30,8 @@ def icheck(prog, pos, name, input):
         return 2
     if input == '1100':
         raise Parser.Error1100('pos1', 'arg1', 'ref1', 'max1')
+    if input == '1101':
+        raise Parser.Error1101('pos1', 'arg1', 'ref1', 'min1')
     if input == '1200':
         raise Parser.Error1200('pos2', 'arg2', 'ref2')
     if input == '1210':

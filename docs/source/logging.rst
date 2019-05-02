@@ -1,4 +1,6 @@
 
+.. _Logging:
+
 Logging
 =======
 
@@ -13,16 +15,19 @@ which can be given the following inputs:
 * ``verbose``: more detailed logging.
 * ``debug``: log even more detail.
 
-.. warning::
+.. note::
 
-  The log file *may* capture sensitive
-  info at this level, although this does not include any login keys since
-  they will be automatically redacted. Consider restricting permissions of
-  the log file and monitoring its contents to assess this possibility.
-  *Alnitak* will not change (or set) the permissions of the log file.
+  At ``debug`` level, the log file *may* capture sensitive information.
+  *Alnitak* mitigates this by redacting login keys from the log messages,
+  and by restricting permissions of the log file when it is created.
+  *Alnitak* will not change the permissions of the log file if it
+  already exists.
 
 
-The following combination of flags provide a guide as to how the program will print errors and information, and where to. You will likely only ever need a few of these scenarios, but they are all listed for the sake of completion.
+The following combination of flags provide a guide as to how the program
+will print errors and information, and where to.
+You will likely only ever need a few of these scenarios, but they are all
+listed for the sake of completion.
 
 .. table:: Logging outcomes
     :align: center
@@ -55,7 +60,12 @@ The following combination of flags provide a guide as to how the program will pr
     | ``-lno -q -Lno``  |                 |         |
     +-------------------+-----------------+---------+
 
-As a general rule of thumb: by default, all messages (info or errors) are written to the logfile, with the error messages also written to stderr. If you want to write to stdout rather than to the logfile, then pass the ``-l-`` (``--log=stdout``) flag. If you want to only ever write to the logfile, then pass the ``-q`` flag. If you want to suppress all info output, pass the ``-Lno`` flag.
+As a general rule of thumb: by default, all messages (info or errors) are
+written to the logfile, with the error messages also written to stderr.
+If you want to write to stdout rather than to the logfile, then pass the
+``-l-`` (``--log=stdout``) flag. If you want to only ever write to the
+logfile, then pass the ``-q`` flag. If you only want to see error messages
+(i.e., suppress all info output), then pass the ``-Lno`` flag.
 
 
 

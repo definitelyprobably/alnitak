@@ -1,4 +1,6 @@
 
+.. _Configuration:
+
 Configuration
 =============
 
@@ -252,7 +254,9 @@ Example Code
 ------------
 
 Here is an outline of some basic bash shell code that will help illustrate
-the above requirements::
+the above requirements:
+
+.. code-block:: bash
 
     #!/bin/bash
     #
@@ -372,6 +376,37 @@ writable.
    not need to expose your credentials in two different files.
 
 
+Other Commands
+**************
+
+The following commands can also be placed anywhere in the configuration
+file::
+
+    dane_directory = /dir
+
+will set the directory in which the dane certificates will be located to
+``/dir/dane/``. The default value is ``/etc/alnitak/``. The command-line
+equivalent is the flag ``--dane-directory`` (or ``-D``).
+
+::
+
+    letsencrypt_directory = /dir
+
+will search for Let's Encrypt certificate in ``/dir`` instead of the default
+``/etc/letsencrypt/``. The command-line equivalent is the flag
+``--letsencrypt-directory`` (or ``-C``).
+
+::
+
+    ttl = N
+
+will set the time-to-live value for the TLSA record renewal to ``N`` seconds
+(see :ref:`Running` for more info). The default value is 86400 (1 day).
+The command-line equivalent is the flag ``--ttl`` (or ``-t``).
+
+
+.. _ConfCertbot:
+
 Certbot
 #######
 
@@ -384,15 +419,14 @@ continue working.
 
 When running certbot explicitly, simply ensure the hooks are specified::
 
-    $ certbot renew --pre-hook "alnitak --pre" --deploy-hook "alnitak --deploy" ...
+    $ certbot renew --pre-hook "alnitak pre" --deploy-hook "alnitak deploy" ...
 
-You must run ``alnitak --pre`` on the certbot pre-hook and ``alnitak --deploy``
-on the certbot deploy-hook. Other alnitak flags may also be given, but these
-**must** be present.
+You must run ``alnitak pre`` on the certbot pre-hook and ``alnitak deploy``
+on the certbot deploy-hook.
 
-The command ``alnitak --pre ...`` ensures that dane certificates are prepared
+The command ``alnitak pre ...`` ensures that dane certificates are prepared
 for a potential certificate renewal (amongst other things). Likewise, the
-command ``alnitak --deploy`` ensures that dane certificates are either
+command ``alnitak deploy`` ensures that dane certificates are either
 restored if no renewal occurs, or creates DANE TLSA records otherwise.
 
 When certificate renewal is automated, either as a cron job or systemd timer,
@@ -401,16 +435,14 @@ directory ``/etc/letsencrypt/renewal``); the following lines must be added to
 the ``renewalparams`` section::
 
     [renewalparams]
-    pre_hook = alnitak --pre
-    renew_hook = alnitak --deploy
+    pre_hook = alnitak pre
+    renew_hook = alnitak deploy
 
 These changes must be made to all such renewal configuration files for which
-you wish *alnitak* to manage DANE TLSA records. Again, additional commands to
-the *alnitak* program may also be specified, but ``--pre`` and ``--deploy``
-**must** at least be present, as shown.
+you wish *alnitak* to manage DANE TLSA records.
 
-Technically, ``alnitak --pre`` needs to be run before certbot renewal occurs,
-and ``alnitak --deploy`` needs to be run after certbot renewal occurs and be
+Technically, ``alnitak pre`` needs to be run before certbot renewal occurs,
+and ``alnitak deploy`` needs to be run after certbot renewal occurs and be
 given a list of domains that were renewed in the environment parameter
 ``RENEWED_DOMAINS`` (space or tab delimited).
 The most convenient way to do this is on the certbot pre and deploy hooks, but
@@ -418,12 +450,12 @@ it is not necessary.
 
 .. warning::
 
-   Do not run ``alnitak --deploy`` on certbot's post hook. *Alnitak* needs to
+   Do not run ``alnitak deploy`` on certbot's post hook. *Alnitak* needs to
    know which domains were renewed, and the environment parameter
    ``RENEWED_DOMAINS`` is not set on the post hook; it is only set on the
    deploy hook.
    Older versions of certbot may be in conflict with this prescription.
-   Ensure that ``alnitak --deploy`` runs on whichever hook sets
+   Ensure that ``alnitak deploy`` runs on whichever hook sets
    ``RENEWED_DOMAINS`` and things will work fine.
 
 
@@ -441,8 +473,7 @@ however often you like. For example, as a cron job every day at 1am and 1pm::
     PATH = /usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
     #
     # m h  dom mon dow   command
-    0   1  *   *   *     alnitak
-    0   13 *   *   *     alnitak
+    0 1,13 *   *   *     alnitak
 
 The times chosen to run at can be anything that is convenient: when
 *alnitak* is called, it will check if the DNS records are live only after a

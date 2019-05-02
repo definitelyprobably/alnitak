@@ -5,6 +5,45 @@ import re
 from alnitak import prog as Prog
 
 
+# A datafile will consist of lines:
+#
+# - prehook line:
+#       domain  "dane_cert"  "live_cert"  "archive_cert"  pending
+#
+#       domain: x.com
+#       dane_cert: /etc/alnitak/dane/x.com/cert.pem
+#       live_cert: /etc/letsencrypt/live/x.com/cert.pem
+#       archive_cert: /etc/letsencrypt/archive/x.com/cert1.pem
+#       pending: 0|1: 0 - if no posthook lines written
+#                     1 - if posthook lines exist
+#
+# - posthook line:
+#       domain spec port protocol tlsa_domain unix_time pending hash
+#
+#       domain: x.com
+#       spec: 301
+#       port: 25
+#       protocol: tcp
+#       tlsa_domain: x.com
+#       unix_time: 123123123
+#       pending: 0|1: 0 - TLSA record was published
+#                     1 - TLSA record still to be published
+#       hash: 123456789abcdef0...
+#
+# - delete line:
+#       x.com delete 301 25 tcp x.com unix_time count hash
+#
+#       domain: x.com
+#       delete is literal
+#       spec: 301
+#       port: 25
+#       protocol tcp
+#       tlsa_domain: x.com
+#       unix_time: 123123123
+#       count: 0 (number of times previous delete lines failed)
+#       hash: 123456789abcdef0...
+#
+
 def read(prog):
     """Read a datafile and set data in the internal program state.
 
@@ -63,7 +102,7 @@ def read(prog):
             continue
 
         # posthook line
-        #   x.com 301 25 tcp x.com unix_time 0 hash
+        #   x.com 301 25 tcp x.com unix_time pending hash
         match = re.match(r'(?P<domain>{})\s+(?P<tlsa_spec>{})\s+(?P<tlsa_port>[0-9]+)\s+(?P<tlsa_protocol>{})\s+(?P<tlsa_domain>{})\s+(?P<time>[0-9]+)\s+(?P<pending>(0|1))\s+(?P<hash>[a-fA-F0-9]+)'.format(prog.tlsa_domain_regex, prog.tlsa_parameters_regex, prog.tlsa_protocol_regex, prog.tlsa_domain_regex), l)
         if match:
 

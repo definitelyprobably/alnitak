@@ -14,12 +14,12 @@ TLSA records when Let's Encrypt certificates are renewed.
    :maxdepth: 2
    :caption: Contents:
 
+   quickstart
    overview
    installation
    configuration
    running
    logging
-   recovery
 
 
 Indices and tables

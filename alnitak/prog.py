@@ -38,6 +38,7 @@ class State:
             name.
         tlsa_protocol_regex (str): regex that specifies a valid TLSA
             protocol.
+        ttl_min (int): minimum allowed value for the '--ttl' flag.
         ttl_max (int): maximum allowed value for the '--ttl' flag.
         timenow (datetime.datetime): UTC time right now.
         testing_mode (bool): normally 'False'. If set to 'True', then
@@ -89,6 +90,7 @@ class State:
         self.tlsa_parameters_regex = r"[23][01][012]"
         self.tlsa_domain_regex = r"((\w[a-zA-Z0-9-]*\w|\w+)\.)+\w+"
         self.tlsa_protocol_regex = r"\w+"
+        self.ttl_min = 0
         self.ttl_max = 7*24*60*60
         self.timenow = datetime.datetime.utcnow()
         self.testing_mode = testing

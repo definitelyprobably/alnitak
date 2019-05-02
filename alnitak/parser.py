@@ -62,7 +62,7 @@ def ttl_check(prog, pos, flag_name, input):
 
     Raises:
         Error: if the input does not conform. Derived classes thrown are:
-            Error1013 or Error1100.
+            Error1013, Error1100 or Error1101.
     """
     try:
         ttl = int(input)
@@ -71,6 +71,9 @@ def ttl_check(prog, pos, flag_name, input):
 
     if ttl > prog.ttl_max:
         raise Error1100(pos, flag_name, input, prog.ttl_max)
+
+    if ttl < prog.ttl_min:
+        raise Error1101(pos, flag_name, input, prog.ttl_min)
 
     return ttl
 
@@ -327,6 +330,14 @@ class Error1100(Error):
         self.max = max
     def __str__(self):
         return "arg {}: flag '{}': input '{}' exceeds maximum value of '{}'".format(self.pos, self.arg, self.ref, self.max)
+
+class Error1101(Error):
+    '''Error for ttl flag: input below minimum value.'''
+    def __init__(self, pos, arg, ref, min):
+        super().__init__(1101, pos, arg, ref)
+        self.min = min
+    def __str__(self):
+        return "arg {}: flag '{}': input '{}' below minimum value of '{}'".format(self.pos, self.arg, self.ref, self.min)
 
 class Error1200(Error):
     '''Error for print mode: malformed input.'''
