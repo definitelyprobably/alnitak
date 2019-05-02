@@ -1,4 +1,6 @@
 
+import os
+
 from alnitak.tests import setup
 from alnitak import prog
 
@@ -51,11 +53,47 @@ def check_for_error_only(file):
     assert lines[-1:] == log_lines_error
 
 
+def test_logging0():
+    # if running as root, the other tests will run as intended, so we can
+    # skip this test...
+    if os.getuid() == 0:
+        return
+
+    # ...otherwise, the other tests will artificially create log files if
+    # they don't already exist because changing the permissions of the log
+    # file will fail if not root; let's test that failure here
+
+    s = setup.Init(keep=True)
+    log = Path(s.varlog / 'log')
+
+    assert not log.exists()
+
+    p = Popen(['alnitak', 'configtest', '-l', str(s.varlog / 'log'),
+                                        '-c', str(s.config)],
+              stdout=PIPE, stderr=PIPE)
+
+    stdout, stderr = p.communicate(timeout=300)
+
+    assert p.returncode == prog.RetVal.ok.value + 16
+
+    assert log.exists()
+    assert log.stat().st_size > 0
+
+    assert len(stdout) == 0
+    assert len(stderr) > 0
+
+
 def test_logging1():
     s = setup.Init(keep=True)
     log = Path(s.varlog / 'log')
 
     assert not log.exists()
+
+    # if not run as root, log creation will fail; so we need to artificially
+    # create the log file first
+    if os.getuid() != 0:
+        with open(str(s.varlog / 'log'), 'w'):
+            pass
 
     p = Popen(['alnitak', 'configtest', '-l', str(s.varlog / 'log'),
                                         '-Ldebug',
@@ -120,6 +158,12 @@ def test_logging4():
     log = Path(s.varlog / 'log')
 
     assert not log.exists()
+
+    # if not run as root, log creation will fail; so we need to artificially
+    # create the log file first
+    if os.getuid() != 0:
+        with open(str(s.varlog / 'log'), 'w'):
+            pass
 
     p = Popen(['alnitak', 'configtest', '-l', str(s.varlog / 'log'),
                                         '-Ldebug',
@@ -188,6 +232,12 @@ def test_logging7():
 
     assert not log.exists()
 
+    # if not run as root, log creation will fail; so we need to artificially
+    # create the log file first
+    if os.getuid() != 0:
+        with open(str(s.varlog / 'log'), 'w'):
+            pass
+
     p = Popen(['alnitak', 'configtest', '-l', str(s.varlog / 'log'),
                                         '-Lno',
                                         '-c', str(s.configX1)],
@@ -251,6 +301,12 @@ def test_logging10():
     log = Path(s.varlog / 'log')
 
     assert not log.exists()
+
+    # if not run as root, log creation will fail; so we need to artificially
+    # create the log file first
+    if os.getuid() != 0:
+        with open(str(s.varlog / 'log'), 'w'):
+            pass
 
     p = Popen(['alnitak', 'configtest', '-l', str(s.varlog / 'log'),
                                         '-Lno',

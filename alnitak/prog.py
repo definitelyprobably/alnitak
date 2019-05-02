@@ -107,7 +107,7 @@ class State:
         self.letsencrypt_directory = pathlib.Path("/etc/letsencrypt")
         self.letsencrypt_live_directory = self.letsencrypt_directory / "live"
         self.ttl = 86400
-        self.log = logging.Log(self.name, self.version, self.timenow,
+        self.log = logging.Log(self.name, self.version, self.timenow, testing,
                                "/var/log/{}.log".format(self.name))
         self.recreate_dane = False
 

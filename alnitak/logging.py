@@ -1,4 +1,5 @@
 
+import os
 import sys
 import pathlib
 from enum import Enum
@@ -25,6 +26,8 @@ class LogOutput:
         progname (str): the program name.
         progversion (str): the program version.
         timenow (datetime.datetime): UTC time of when the program was run.
+        testing_mode (bool): if in testing mode, do not change permissions
+            of any created log file.
         file_name (str): the name of the file to log to
         file (file object): the object returned by open.
         info_to_stdout (bool): if we printing info messages to stdout.
@@ -40,10 +43,11 @@ class LogOutput:
         stderr_failure (list(str)): list of error messages encountered when
             trying to write to stderr.
     """
-    def __init__(self, progname, progversion, timenow, filename):
+    def __init__(self, progname, progversion, timenow, testing, filename):
         self.progname = progname
         self.progversion = progversion
         self.timenow = timenow
+        self.testing_mode = testing
         self.file_name = filename
         self.file = None
 
@@ -166,6 +170,8 @@ class LogOutput:
             self.error_to_logfile = True
             return
 
+        # change permissions of file if it doesn't exist:
+        self.change_permissions()
 
         try:
             self.file = open(self.file_name, 'a')
@@ -180,6 +186,36 @@ class LogOutput:
         if not (self.info_to_logfile or self.error_to_logfile):
             return
         self.file.close()
+
+    def change_permissions(self):
+        if self.testing_mode:
+            return
+
+        fpath = pathlib.Path(self.file_name)
+
+        try:
+            with open(self.file_name, 'x'):
+                pass
+        except FileExistsError:
+            return
+
+        try:
+            os.chown(self.file_name, 0, 0)
+        except OSError as ex:
+            self.logfile_failure += [
+                    "logfile '{}': changing owner failed: {}".format(
+                            self.file_name, ex.strerror.lower()) ]
+            # do not set self.*_to_logfile = False: we should still
+            # print to the logfile.
+
+        try:
+            fpath.chmod(0o600)
+        except OSError as ex:
+            self.logfile_failure += [
+                    "logfile '{}': changing permissions failed: {}".format(
+                            self.file_name, ex.strerror.lower()) ]
+            # do not set self.*_to_logfile = False: we should still
+            # print to the logfile.
 
     def has_errors(self):
         return (self.logfile_failure or self.stdout_failure
@@ -244,11 +280,11 @@ class Log:
         quiet (bool): whether the '-q' flag was given or not.
         output (LogOutput): the class object that does the logging itself.
     """
-    def __init__(self, name, version, time, file):
+    def __init__(self, name, version, time, testing, file):
         self.type = LogType.logfile # -l
         self.level = LogLevel.normal # -L
         self.quiet = False # -q
-        self.output = LogOutput(name, version, time, file)
+        self.output = LogOutput(name, version, time, testing, file)
 
     def __enter__(self):
         self.set_info_target()

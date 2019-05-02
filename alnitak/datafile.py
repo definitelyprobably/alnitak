@@ -364,15 +364,28 @@ def remove(prog):
             'RetVal.ok' for success. 
     """
     prog.log.info1("+++ removing datafile '{}'".format(prog.datafile))
+
+    # if in reset mode, we do not want to remove the datafile if it exists,
+    # unless the '--force' flag has been given.
+    if prog.recreate_dane:
+        if prog.datafile.exists():
+            if not prog.args.has('force'):
+                prog.log.error("datafile exists: will not continue (use '--force' to override)")
+                return Prog.RetVal.exit_failure
+        else:
+            prog.log.info1("  + datafile not found; ok")
+            return Prog.RetVal.ok
+
     try:
         prog.datafile.unlink()
     except FileNotFoundError as ex:
-        pass
+        return Prog.RetVal.ok
     except OSError as ex:
         prog.log.error("removing datafile '{}' failed: {}".format(
                                             ex.filename, ex.strerror.lower()))
         return Prog.RetVal.exit_failure
 
+    prog.log.info1("  + datafile removed")
     return Prog.RetVal.ok
 
 def fix_permissions(prog):

@@ -107,7 +107,7 @@ Usage: alnitak [mode] [options]
 Mode:'''
 
     modes='''
-    <DEFAULT>       (no explicit mode given) run in default mode.
+    <default>       (no explicit mode given) run in default mode.
     pre             run in pre-hook mode.
     deploy          run in deploy-hook mode.
     reset           reset (or create) the dane directory.
@@ -121,6 +121,9 @@ Options:
     -V, --version       print the program version number and exit.
 '''
 
+    f_flag='''
+        --force         force removal of the datafile, if it exists.
+'''
     l_flag='''
     -l, --log LOG       write to log file 'LOG'.
 '''
@@ -191,7 +194,7 @@ Options:
     resetm='''
     reset
        alnitak reset [-l LOG] [-L LEVEL] [-C DIR] [-D DIR] [-c CONF]
-                     [-t TIME] [-q]
+                     [-t TIME] [-q] [--force]
 
             reset (or recreate) the dane directory.
 '''
@@ -227,27 +230,32 @@ Options:
                     print certificate data for the specific file in the
                     Let's Encrypt directory (/etc/letsencrypt/)
 '''
-    if mode == 'pre':
+    if not mode.names:
+        return "{}{}{}{}{}{}{}{}{}{}{}\n{}".format(
+                head, modes, default, opts_common,
+                c_flag, C_flag, D_flag, l_flag, L_flag, t_flag, q_flag,
+                version_message(prog))
+    if 'pre' in mode.names:
         return "{}{}{}{}{}{}{}{}{}{}\n{}".format(
                 head, prem, opts_common,
                 c_flag, C_flag, D_flag, l_flag, L_flag, t_flag, q_flag,
                 version_message(prog))
-    if mode == 'deploy':
+    if 'deploy' in mode.names:
         return "{}{}{}{}{}{}{}{}{}{}\n{}".format(
                 head, deploym, opts_common,
                 c_flag, C_flag, D_flag, l_flag, L_flag, t_flag, q_flag,
                 version_message(prog))
-    if mode == 'reset':
-        return "{}{}{}{}{}{}{}{}{}{}\n{}".format(
+    if 'reset' in mode.names:
+        return "{}{}{}{}{}{}{}{}{}{}{}\n{}".format(
                 head, resetm, opts_common,
-                c_flag, C_flag, D_flag, l_flag, L_flag, t_flag, q_flag,
+                c_flag, C_flag, D_flag, f_flag, l_flag, L_flag, t_flag, q_flag,
                 version_message(prog))
-    if mode == 'configtest':
+    if 'configtest' in mode.names:
         return "{}{}{}{}{}{}{}\n{}".format(
                 head, configtestm, opts_common,
                 c_flag, l_flag, L_flag, q_flag,
                 version_message(prog))
-    if mode == 'print':
+    if 'print' in mode.names:
         return "{}{}{}{}{}{}{}\n{}".format(
                 head, printm, opts_common,
                 c_flag, C_flag, l_flag, L_flag,
@@ -933,6 +941,7 @@ def parse_args(prog):
 
     resetm = Mode('reset', 'init')
     resetm.add_flag(C_flag, D_flag, t_flag, q_flag)
+    resetm.add_bare('--force')
     p.add_mode(resetm)
 
     configm = Mode('configtest')
@@ -1020,7 +1029,7 @@ def parse_args(prog):
 
     elif p.is_mode('reset'):
         prog.recreate_dane = True
-        exec_list = [ config.read, dane.init_dane_directory, datafile.remove ]
+        exec_list = [ config.read, datafile.remove, dane.init_dane_directory ]
 
     elif p.is_mode('prehook'):
         exec_list = [ config.read, dane.init_dane_directory,
