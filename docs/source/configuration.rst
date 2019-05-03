@@ -371,9 +371,9 @@ writable.
    The format for the credentials file is designed to be able to read the
    file that certbot itself needs to interact with Cloudflare in order to
    renew a certificate (if utilized; for example if you generated a wildcard
-   certificate). This means that if such a file exists on your system with
-   your Cloudflare API credentials, you can reuse it for *alnitak* and do
-   not need to expose your credentials in two different files.
+   certificate). This means that if such a file exists on your system,
+   you can reuse it for *alnitak* and do not need to expose your credentials
+   in two different files.
 
 
 Other Commands
