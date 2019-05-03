@@ -3,8 +3,8 @@ import re
 import shlex
 from importlib import import_module
 
+from alnitak import parser
 from alnitak import prog as Prog
-
 
 
 def read(prog):
@@ -42,6 +42,8 @@ def read(prog):
 
     default_tlsa_list = []
     default_api = None
+
+    log_level = None
 
     for l in raw:
         line_pos += 1
@@ -82,18 +84,23 @@ def read(prog):
             try:
                 inputs = shlex.split(match.group('input'))
             except ValueError:
-                state.add_error(prog, "malformed line")
+                if len(l) > 23:
+                    state.add_error(prog,
+                            "unrecognized command: '{}...'".format(l[:20]))
+                else:
+                    state.add_error(prog,
+                            "unrecognized command: '{}'".format(l))
                 continue
 
             if param == "tlsa":
                 prog.log.info3("  + line {}: parameter: {}, inputs: {}".format(
                                                     line_pos, param, inputs))
                 if len(inputs) == 0:
-                    state.add_error(prog, "no tlsa record given")
+                    state.add_error(prog, "no tlsa data given")
                 elif len(inputs) == 1:
                     state.add_error(prog, "tlsa record given insufficient data")
                 elif len(inputs) > 4:
-                    state.add_error(prog, "tlsa record given superfluous data")
+                    state.add_error(prog, "tlsa record given superfluous data: '{}'".format(' '.join(inputs[4:])))
                 else:
                     tlsa = get_tlsa_param(prog, inputs, active_section, state)
                     if tlsa:
@@ -120,7 +127,8 @@ def read(prog):
                         else:
                             default_api = api
                 else:
-                    state.add_error(prog, "unrecognized api scheme")
+                    state.add_error(prog,
+                            "unrecognized api scheme: '{}'".format(inputs[0]))
 
             elif param == "dane_directory":
                 prog.log.info3("  + line {}: parameter: {}, inputs: {}".format(
@@ -129,8 +137,7 @@ def read(prog):
                     state.add_error(
                         prog, "dane_directory command given no input")
                 elif len(inputs) > 1:
-                    state.add_error(
-                        prog, "dane_directory command given superfluous input")
+                    state.add_error(prog, "dane_directory command given superfluous input: '{}'".format(' '.join(inputs[1:])))
                 else:
                     prog.set_dane_directory(inputs[0])
 
@@ -141,10 +148,24 @@ def read(prog):
                     state.add_error(
                         prog, "letsencrypt_directory command given no input")
                 elif len(inputs) > 1:
-                    state.add_error(prog,
-                        "letsencrypt_directory command given superfluous input")
+                    state.add_error(prog, "letsencrypt_directory command given superfluous input: '{}'".format(' '.join(inputs[1:])))
                 else:
                     prog.set_letsencrypt_directory(inputs[0])
+
+            elif param == "log_level":
+                prog.log.info3("  + line {}: parameter: {}, inputs: {}".format(
+                                                    line_pos, param, inputs))
+                if len(inputs) == 0:
+                    state.add_error(
+                        prog, "log_level command given no input")
+                elif len(inputs) > 1:
+                    state.add_error(prog, "log_level command given superfluous input: '{}'".format(' '.join(inputs[1:])))
+                else:
+                    if inputs[0] not in [ 'no', 'normal', 'verbose', 'debug' ]:
+                        state.add_error(prog, "")
+                        continue
+
+                    log_level = inputs[0]
 
             elif param == "ttl":
                 prog.log.info3("  + line {}: parameter: {}, inputs: {}".format(
@@ -153,18 +174,19 @@ def read(prog):
                     state.add_error(
                         prog, "ttl command given no input")
                 elif len(inputs) > 1:
-                    state.add_error(prog,
-                        "ttl command given superfluous input")
+                    state.add_error(prog, "ttl command given superfluous input: '{}'".format(' '.join(inputs[1:])))
                 else:
                     try:
-                        ttl_value = int(inputs[0])
-                    except ValueError as ex:
-                        state.add_error(prog, "ttl value not an integer")
+                        ttl_value = parser.ttl_check(prog, 0, 'config',
+                                                     inputs[0])
+                    except parser.Error1013:
+                        state.add_error(prog, "ttl value '{}' not an integer".format(inputs[0]))
                         continue
-
-                    if ttl_value < prog.ttl_min:
-                        state.add_error(prog,
-                                        "ttl value less than minimum value")
+                    except parser.Error1100 as ex:
+                        state.add_error(prog, "ttl value '{}' exceeds maximum value of '{}'".format(inputs[0], ex.max))
+                        continue
+                    except parser.Error1101 as ex:
+                        state.add_error(prog, "ttl value '{}' less than minimum value of '{}'".format(inputs[0], ex.min))
                         continue
 
                     prog.set_ttl(ttl_value)
@@ -181,7 +203,11 @@ def read(prog):
         if match:
             continue
 
-        state.add_error(prog, "malformed line")
+        if len(l) > 23:
+            state.add_error(prog,
+                    "unrecognized command: '{}...'".format(l[:20]))
+        else:
+            state.add_error(prog, "unrecognized command: '{}'".format(l))
 
 
     state.lineno = None
@@ -204,6 +230,11 @@ def read(prog):
         prog.log.info3("  + no targets found")
         prog.log.error("config file: no targets given")
         return Prog.RetVal.config_failure
+
+    # set the delayed log level. We don't do this straight away or else we
+    # will have mixed logging for this function itself.
+    if log_level:
+        prog.set_log_level(log_level)
 
     return Prog.RetVal.ok
 

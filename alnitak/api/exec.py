@@ -97,7 +97,8 @@ def drop_privs(api):
     try:
         os.umask(0o027)
     except OSError as ex:
-        raise Except.PrivError("setting umask failed: {}".format(ex.strerror))
+        raise Except.PrivError(
+                "setting umask failed: {}".format(ex.strerror.lower()))
 
     try:
         os.setgroups( os.getgrouplist(pwd.getpwuid(api.uid).pw_name, gid) )
@@ -150,7 +151,7 @@ def api_publish(prog, api, tlsa, hash):
                 "IFS": " \t\n",
                 "RENEWED_DOMAINS": " ".join(prog.renewed_domains),
                 "ZONE_DOMAIN": api.domain,
-                "LE_DIR": prog.letsencrypt_directory,
+                "LETSENCRYPT_DIR": str(prog.letsencrypt_directory),
                 "TLSA_PARAM": "{}{}{}".format(
                                 tlsa.usage, tlsa.selector, tlsa.matching),
                 "TLSA_USAGE": tlsa.usage,
@@ -236,7 +237,7 @@ def api_delete(prog, api, tlsa, hash1, hash2):
                 "IFS": " \t\n",
                 "RENEWED_DOMAINS": " ".join(prog.renewed_domains),
                 "ZONE_DOMAIN": api.domain,
-                "LE_DIR": prog.letsencrypt_directory,
+                "LETSENCRYPT_DIR": str(prog.letsencrypt_directory),
                 "TLSA_PARAM": "{}{}{}".format(
                                 tlsa.usage, tlsa.selector, tlsa.matching),
                 "TLSA_USAGE": tlsa.usage,

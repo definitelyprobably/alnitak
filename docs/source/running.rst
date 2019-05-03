@@ -193,8 +193,18 @@ log level
     -L LEVEL, --level LEVEL
 
 Set the level of logging to be performed. The allowed values are ``no``,
-``normal`` (the default value), ``verbose`` and ``debug``. See :ref:`Logging`
-for more details.
+``normal`` (the default value), ``verbose`` and ``debug``.
+(See :ref:`Logging` for more details on the behaviour of these values.)
+The logging level can also be set in the configuration file via the
+command::
+
+    log_level = LEVEL
+
+but note that if set in the configuration file, the logging level that is
+set will not apply to the logging output that might be produced by parsing
+the configuration file itself. This is not often an issue, but if
+configuration file output *is* desired, then the logging level must be set at
+the command-line.
 
 ttl
 ***

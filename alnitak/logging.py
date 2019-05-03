@@ -63,8 +63,11 @@ class LogOutput:
     def send_error(self, message):
         if isinstance(message, str):
             lines = message.splitlines()
-        else:
+        elif isinstance(message, list):
             lines = message
+        else:
+            # message might be a Prog class object
+            lines = [ str(message) ]
 
         if self.error_to_logfile:
             self.send_to_logfile([ "error: {}\n".format(l) for l in lines ])
@@ -77,8 +80,11 @@ class LogOutput:
     def send_info(self, message):
         if isinstance(message, str):
             lines = message.splitlines()
-        else:
+        elif isinstance(message, list):
             lines = message
+        else:
+            # message might be a Prog class object
+            lines = [ str(message) ]
 
         if self.info_to_logfile:
             self.send_to_logfile([ "{}\n".format(l) for l in lines ])

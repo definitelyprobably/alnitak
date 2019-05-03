@@ -625,10 +625,12 @@ class Parser:
             return False
 
     def is_mode(self, mode):
-        if self.active_mode.names:
-            return mode in self.active_mode.names
-        else:
+        if self.active_mode is None:
+            return mode == self.active_mode
+        elif self.active_mode.names is None:
             return mode == self.active_mode.names
+        else:
+            return mode in self.active_mode.names
 
     def split_long(self, flag):
         m = re.match(r'(?P<name>[^=]+)(=(?P<input>.*))?$', flag)
@@ -969,7 +971,7 @@ def parse_args(prog):
 
     ttl = p.has('t')
     if ttl:
-        prog.set_ttl(ttl)
+        prog.set_ttl(ttl, False)
 
     # must set 'prog.log.quiet' before the other 'prog.log' details.
     if p.has('q'):
@@ -989,25 +991,21 @@ def parse_args(prog):
 
     loglevel = p.has('L')
     if loglevel:
-        if loglevel == 'verbose':
-            prog.log.set_verbose_logging()
-        elif loglevel == 'debug':
-            prog.log.set_debug_logging()
-        elif loglevel == 'no':
-            prog.log.set_no_logging()
+        prog.set_log_level(loglevel, False)
 
     dd = p.has('D')
     if dd:
-        prog.set_dane_directory(dd)
+        prog.set_dane_directory(dd, False)
 
     le = p.has('C')
     if le:
-        prog.set_letsencrypt_directory(le)
+        prog.set_letsencrypt_directory(le, False)
 
     conf = p.has('c')
     if conf:
         prog.set_config_file(conf)
 
+    prog.force = p.has('force')
 
     if p.is_mode('print'):
         # do not log anything below 'debug':

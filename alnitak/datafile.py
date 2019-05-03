@@ -369,7 +369,7 @@ def remove(prog):
     # unless the '--force' flag has been given.
     if prog.recreate_dane:
         if prog.datafile.exists():
-            if not prog.args.has('force'):
+            if not prog.force:
                 prog.log.error("datafile exists: will not continue (use '--force' to override)")
                 return Prog.RetVal.exit_failure
         else:

@@ -1211,6 +1211,7 @@ def create_state_obj(init=None, config=None, recreate=True, lock=False,
         prog = Prog.State(lock=lock, testing=True)
 
     prog.lockfile = Path(init.varlock / 'alnitak.lock')
+    prog.force = True
 
     prog.log.set_no_logging()
     prog.recreate_dane = recreate

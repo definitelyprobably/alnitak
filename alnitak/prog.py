@@ -56,6 +56,8 @@ class State:
             place: blind deletion will remove the lock when we don't want
             it to.
 
+        setcl (SetCL): record command-line overrides of config file
+            commands.
         config (pathlib.Path): the path of the config file.
         dane_directory (pathlib.Path): the path of the dane directory.
         letsencrypt_directory (pathlib.Path): the path of the Let's Encrypt
@@ -70,6 +72,7 @@ class State:
             given.
 
         args: the args given to argparse.
+        force (bool): if the '--force' flag has been given.
         target_list (list(Target)): list of targets in the config file.
         dane_domain_directories (dict(str: list(str))): for every folder
             in the live directory, set the key to the folder name (which
@@ -102,6 +105,7 @@ class State:
         self.locked = False
 
         ## program configuration data
+        self.setcl = SetCL()
         self.config = pathlib.Path("/etc/{}.conf".format(self.name))
         self.dane_directory = pathlib.Path("/etc/{}/dane".format(self.name))
         self.letsencrypt_directory = pathlib.Path("/etc/letsencrypt")
@@ -114,6 +118,7 @@ class State:
         ## the following are data objects filled in during operation of the
         ## program
         self.args = None
+        self.force = False
         self.target_list = [ ]
         self.dane_domain_directories = { }
             # dictionary of keys that are dane domain subfolders, keyed
@@ -193,18 +198,63 @@ class State:
             return p
         return pathlib.Path.cwd() / p
 
-    def set_letsencrypt_directory(self, path):
+    def set_letsencrypt_directory(self, path, config=True):
+        if config:
+            if self.setcl.letsencrypt_directory:
+                return
+        else:
+            self.setcl.letsencrypt_directory = True
+
         self.letsencrypt_directory = self.make_absolute(path)
         self.letsencrypt_live_directory = self.letsencrypt_directory / "live"
 
-    def set_dane_directory(self, path):
+    def set_dane_directory(self, path, config=True):
+        if config:
+            if self.setcl.dane_directory:
+                return
+        else:
+            self.setcl.dane_directory = True
         self.dane_directory = self.make_absolute(path)
 
-    def set_ttl(self, ttl):
+    def set_ttl(self, ttl, config=True):
+        if config:
+            if self.setcl.ttl:
+                return
+        else:
+            self.setcl.ttl = True
         self.ttl = ttl
+
+    def set_log_level(self, level, config=True):
+        if config:
+            if self.setcl.level:
+                return
+        else:
+            self.setcl.level = True
+
+        if level == 'debug':
+            self.log.set_debug_logging()
+        elif level == 'verbose':
+            self.log.set_verbose_logging()
+        elif level == 'no':
+            self.log.set_no_logging()
 
     def set_config_file(self, path):
         self.config = self.make_absolute(path)
+
+class SetCL:
+    """Parameters set at the command-line, overriding config equivalents.
+
+    Attributes:
+        dane_directory (bool): True if '-D' set on the command-line.
+        letsencrypt_directory (bool): True if '-C' set on the command-line.
+        ttl (bool): True if '-t' set on the command-line.
+        level (bool): True if '-L' set on the command-line.
+    """
+    def __init__(self):
+        self.dane_directory = False
+        self.letsencrypt_directory = False
+        self.ttl = False
+        self.level = False
 
 class RetVal(Enum):
     """Exit code values."""

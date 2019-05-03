@@ -404,6 +404,20 @@ will set the time-to-live value for the TLSA record renewal to ``N`` seconds
 (see :ref:`Running` for more info). The default value is 86400 (1 day).
 The command-line equivalent is the flag ``--ttl`` (or ``-t``).
 
+::
+
+    log_level = <no|normal|verbose|debug>
+
+will set the logging level to the desired value (``normal`` is the default).
+The only difference between setting the logging level in the configuration
+file instead of at the command line (via the ``-L`` or ``--log-level``
+flags) is that certain logging output from the reading of the
+configuration file itself will be missed. This is often not an issue, since
+the filesystem/DNS actions of the program are the real targets of the
+logging mechanisms.
+If, however, you do want to capture configuration file parsing in the log
+file, then you must use command-line flags.
+
 
 .. _ConfCertbot:
 
