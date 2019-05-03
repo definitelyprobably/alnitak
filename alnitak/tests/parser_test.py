@@ -2,6 +2,7 @@
 from alnitak.tests import setup
 from alnitak import prog
 from alnitak import parser as Parser
+from alnitak import exceptions as Except
 
 from pathlib import Path
 from subprocess import Popen, PIPE
@@ -29,17 +30,17 @@ def icheck(prog, pos, name, input):
     if input == 'B':
         return 2
     if input == '1100':
-        raise Parser.Error1100('pos1', 'arg1', 'ref1', 'max1')
+        raise Except.Error1100('pos1', 'arg1', 'ref1', 'max1')
     if input == '1101':
-        raise Parser.Error1101('pos1', 'arg1', 'ref1', 'min1')
+        raise Except.Error1101('pos1', 'arg1', 'ref1', 'min1')
     if input == '1200':
-        raise Parser.Error1200('pos2', 'arg2', 'ref2')
+        raise Except.Error1200('pos2', 'arg2', 'ref2')
     if input == '1210':
-        raise Parser.Error1210('pos3', 'arg3', 'ref3', 'spec1')
+        raise Except.Error1210('pos3', 'arg3', 'ref3', 'spec1')
     if input == '1211':
-        raise Parser.Error1211('pos4', 'arg4', 'ref4', 'spec2')
+        raise Except.Error1211('pos4', 'arg4', 'ref4', 'spec2')
     if input == '1212':
-        raise Parser.Error1212('pos5', 'arg5', 'ref5', 'spec3')
+        raise Except.Error1212('pos5', 'arg5', 'ref5', 'spec3')
     return 0
 
 

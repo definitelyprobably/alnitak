@@ -1,5 +1,4 @@
 
-import os
 import re
 import argparse
 import pathlib
@@ -266,8 +265,7 @@ def try_as_domain(prog, inp):
 
     try:
         if cont.is_dir():
-            files = [ cont / f.name for f in os.scandir(str(cont))
-                                                            if f.is_file() ]
+            files = [ f for f in cont.iterdir() if f.is_file() ]
             if files:
                 return files
             raise Except.FunctionError(

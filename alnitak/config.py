@@ -3,8 +3,8 @@ import re
 import shlex
 from importlib import import_module
 
-from alnitak import parser
 from alnitak import prog as Prog
+from alnitak import exceptions as Except
 
 
 def read(prog):
@@ -177,15 +177,18 @@ def read(prog):
                     state.add_error(prog, "ttl command given superfluous input: '{}'".format(' '.join(inputs[1:])))
                 else:
                     try:
-                        ttl_value = parser.ttl_check(prog, 0, 'config',
-                                                     inputs[0])
-                    except parser.Error1013:
+                        import alnitak.parser
+                        # python 3.4: 'from alnitak import parser' will
+                        # cause an error because of circular imports.
+                        # Importing like this will work
+                        ttl_value = alnitak.parser.ttl_check(prog, 0, 'config', inputs[0])
+                    except Except.Error1013:
                         state.add_error(prog, "ttl value '{}' not an integer".format(inputs[0]))
                         continue
-                    except parser.Error1100 as ex:
+                    except Except.Error1100 as ex:
                         state.add_error(prog, "ttl value '{}' exceeds maximum value of '{}'".format(inputs[0], ex.max))
                         continue
-                    except parser.Error1101 as ex:
+                    except Except.Error1101 as ex:
                         state.add_error(prog, "ttl value '{}' less than minimum value of '{}'".format(inputs[0], ex.min))
                         continue
 

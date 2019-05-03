@@ -112,10 +112,8 @@ def init_dane_directory(prog):
     prog.log.info3("  + domain directories in the live direcory '{}':".format(
                                             prog.letsencrypt_live_directory))
     try:
-        live_domains = [
-                pathlib.Path(prog.letsencrypt_live_directory / f.name)
-                    for f in os.scandir(str(prog.letsencrypt_live_directory))
-                    if f.is_dir() ]
+        live_domains = [ f for f in prog.letsencrypt_live_directory.iterdir()
+                            if f.is_dir() ]
     except OSError as ex:
         prog.log.error(
                 "letsencrypt live directory '{}': {}".format(
@@ -168,7 +166,7 @@ def init_dane_directory(prog):
         prog.log.info3(
             "  + creating symlinks to live domain symlinks...".format(dane_d))
         try:
-            link_list = [ f.name for f in os.scandir(str(d))
+            link_list = [ f.name for f in d.iterdir()
                                         if f.is_symlink() and f.is_file() ]
         except OSError as ex:
             prog.log.error(

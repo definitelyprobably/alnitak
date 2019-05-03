@@ -27,23 +27,24 @@ def print_check(prog, pos, flag_name, input):
             extracted from the input.
 
     Raises:
-        Error: if the input does not conform. Derived classes thrown are:
-            Error1200, Error1210, Error1211, Error1212.
+        Except.Error: if the input does not conform. Derived classes thrown
+            are: Except.Error1200, Except.Error1210, Except.Error1211,
+            Except.Error1212.
     """
     if len(input) < 5:
-        raise Error1200(pos, flag_name, input)
+        raise Except.Error1200(pos, flag_name, input)
 
     if input[3] != ':':
-        raise Error1200(pos, flag_name, input)
+        raise Except.Error1200(pos, flag_name, input)
 
     if input[0] not in ['2', '3']:
-        raise Error1210(pos, flag_name, input, input[0])
+        raise Except.Error1210(pos, flag_name, input, input[0])
 
     if input[1] not in ['0', '1']:
-        raise Error1211(pos, flag_name, input, input[1])
+        raise Except.Error1211(pos, flag_name, input, input[1])
 
     if input[2] not in ['0', '1', '2']:
-        raise Error1212(pos, flag_name, input, input[2])
+        raise Except.Error1212(pos, flag_name, input, input[2])
 
     return Prog.Record(input[:3], input[4:])
 
@@ -61,19 +62,19 @@ def ttl_check(prog, pos, flag_name, input):
         int: returns the input converted to an integer, unmodified.
 
     Raises:
-        Error: if the input does not conform. Derived classes thrown are:
-            Error1013, Error1100 or Error1101.
+        Except.Error: if the input does not conform. Derived classes thrown
+            are: Except.Error1013, Except.Error1100 or Except.Error1101.
     """
     try:
         ttl = int(input)
     except ValueError:
-        raise Error1013(pos, flag_name, input)
+        raise Except.Error1013(pos, flag_name, input)
 
     if ttl > prog.ttl_max:
-        raise Error1100(pos, flag_name, input, prog.ttl_max)
+        raise Except.Error1100(pos, flag_name, input, prog.ttl_max)
 
     if ttl < prog.ttl_min:
-        raise Error1101(pos, flag_name, input, prog.ttl_min)
+        raise Except.Error1101(pos, flag_name, input, prog.ttl_min)
 
     return ttl
 
@@ -268,119 +269,6 @@ Options:
 
 
 
-class Error(Exception):
-    '''Base class for command-line parsing errors.'''
-    def __init__(self, errno, pos, arg, ref):
-        self.errno = errno
-        self.pos = pos
-        self.arg = arg
-        self.ref = ref
-
-class Error1000(Error):
-    '''Mode not recognized.'''
-    def __init__(self, arg):
-        super().__init__(1000, None, arg, None)
-    def __str__(self):
-        return "mode '{}' not recognized".format(self.arg)
-
-class Error1010(Error):
-    '''Input to mandatory flag missing.'''
-    def __init__(self, pos, arg):
-        super().__init__(1010, pos, arg, None)
-    def __str__(self):
-        return "arg {}: flag '{}': required input missing".format(
-                self.pos, self.arg)
-
-class Error1011(Error):
-    '''Bare flag given an input.'''
-    def __init__(self, pos, arg, ref):
-        super().__init__(1011, pos, arg, ref)
-    def __str__(self):
-        return "arg {}: flag '{}': does not take an input: '{}'".format(
-                self.pos, self.arg, self.ref)
-
-class Error1012(Error):
-    '''Bare long flag given an empty input.'''
-    def __init__(self, pos, arg):
-        super().__init__(1012, pos, arg, None)
-    def __str__(self):
-        return "arg {}: flag '{}': does not expect an input".format(
-                self.pos, self.arg)
-
-class Error1013(Error):
-    '''Input to flag not recognized.'''
-    def __init__(self, pos, arg, ref):
-        super().__init__(1013, pos, arg, ref)
-    def __str__(self):
-        return "arg {}: flag '{}': input not recognized: '{}'".format(
-                self.pos, self.arg, self.ref)
-
-class Error1020(Error):
-    '''Unrecognized flag.'''
-    def __init__(self, pos, arg):
-        super().__init__(1020, pos, arg, None)
-    def __str__(self):
-        return "arg {}: flag '{}': unrecognized flag".format(
-                self.pos, self.arg)
-
-class Error1021(Error):
-    '''Unrecognized input.'''
-    def __init__(self, pos, arg):
-        super().__init__(1021, pos, arg, None)
-    def __str__(self):
-        return "arg {}: input '{}': unrecognized input".format(
-                self.pos, self.arg)
-
-class Error1100(Error):
-    '''Error for ttl flag: input exceeds maximum value.'''
-    def __init__(self, pos, arg, ref, max):
-        super().__init__(1100, pos, arg, ref)
-        self.max = max
-    def __str__(self):
-        return "arg {}: flag '{}': input '{}' exceeds maximum value of '{}'".format(self.pos, self.arg, self.ref, self.max)
-
-class Error1101(Error):
-    '''Error for ttl flag: input below minimum value.'''
-    def __init__(self, pos, arg, ref, min):
-        super().__init__(1101, pos, arg, ref)
-        self.min = min
-    def __str__(self):
-        return "arg {}: flag '{}': input '{}' below minimum value of '{}'".format(self.pos, self.arg, self.ref, self.min)
-
-class Error1200(Error):
-    '''Error for print mode: malformed input.'''
-    def __init__(self, pos, arg, ref):
-        super().__init__(1200, pos, arg, ref)
-    def __str__(self):
-        return "arg {}: flag '{}': malformed input '{}': must be like 'XYZ:CERT'".format(self.pos, self.arg, self.ref)
-
-class Error1210(Error):
-    '''Error for print mode: malformed usage value.'''
-    def __init__(self, pos, arg, ref, spec):
-        super().__init__(1210, pos, arg, ref)
-        self.spec = spec
-    def __str__(self):
-        return "arg {}: flag '{}': input '{}': usage value '{}' not recognized".format(self.pos, self.arg, self.ref, self.spec)
-
-class Error1211(Error):
-    '''Error for print mode: malformed selector value.'''
-    def __init__(self, pos, arg, ref, spec):
-        super().__init__(1211, pos, arg, ref)
-        self.spec = spec
-    def __str__(self):
-        return "arg {}: flag '{}': input '{}': selector value '{}' not recognized".format(self.pos, self.arg, self.ref, self.spec)
-
-class Error1212(Error):
-    '''Error for print mode: malformed matching type value.'''
-    def __init__(self, pos, arg, ref, spec):
-        super().__init__(1212, pos, arg, ref)
-        self.spec = spec
-    def __str__(self):
-        return "arg {}: flag '{}': input '{}': matching type value '{}' not recognized".format(self.pos, self.arg, self.ref, self.spec)
-
-
-
-
 
 class FlagType(Enum):
     '''Argument type.'''
@@ -455,7 +343,7 @@ class Mode:
     '''
     def __init__(self, *names):
         if names:
-            self.names = [ *names ]
+            self.names = list(names)
         else:
             self.names = None
         self.flags = []
@@ -568,7 +456,7 @@ class Parser:
             the flags in 'common_flags' and the flags in the active mode.
         instances (list(Instance)): list of flag instances detected on the
             command line.
-        errors (list(Error)): list of errors detected.
+        errors (list(Except.Error)): list of errors detected.
         inputs (list): list of command-line inputs (arguments that are not
             flags or flag inputs). The type in the list will be either a
             str object, or else a type returned by a matching function.
@@ -676,7 +564,7 @@ class Parser:
                     collect = mode.collect
                     break
             else:
-                self.errors += [ Error1000(mode_name) ]
+                self.errors += [ Except.Error1000(mode_name) ]
                 # cannot process flags that follow since we don't know
                 # what to expect, so exit
                 return True
@@ -731,7 +619,7 @@ class Parser:
             if defer.flag.type == FlagType.option:
                 self.instances += [ defer.instance() ]
             else:
-                self.errors += [ Error1010(defer.pos, defer.flag_name) ]
+                self.errors += [ Except.Error1010(defer.pos, defer.flag_name) ]
 
 
         present_flags = { i.flag.canonical() for i in self.instances }
@@ -749,14 +637,14 @@ class Parser:
             if defer.flag.type == FlagType.option:
                 self.instances += [ defer.instance() ]
             else:
-                self.errors += [ Error1010(defer.pos, defer.flag_name) ]
+                self.errors += [ Except.Error1010(defer.pos, defer.flag_name) ]
             defer = None
 
         if ref_flag.type == FlagType.bare:
             if input:
-                self.errors += [ Error1011(self.cl.pos, name, input) ]
+                self.errors += [ Except.Error1011(self.cl.pos, name, input) ]
             elif input != None:
-                self.errors += [ Error1012(self.cl.pos, name) ]
+                self.errors += [ Except.Error1012(self.cl.pos, name) ]
             else:
                 self.instances += [
                         Instance(ref_flag, self.cl.pos, arg, name) ]
@@ -770,20 +658,20 @@ class Parser:
                                                          arg, name, input) ]
                         else:
                             self.errors += [
-                                        Error1013(self.cl.pos, name, input) ]
+                                    Except.Error1013(self.cl.pos, name, input) ]
                     else:
                         try:
                             res = ref_flag.input_match(self.prog, self.cl.pos,
                                                        name, input)
                             self.instances += [ Instance(ref_flag, self.cl.pos,
                                                          arg, name, res) ]
-                        except Error as ex:
+                        except Except.Error as ex:
                             self.errors += [ ex ]
                 else:
                     self.instances += [
                             Instance(ref_flag, self.cl.pos, arg, name, input) ]
             elif input != None:
-                self.errors += [ Error1010(self.cl.pos, name) ]
+                self.errors += [ Except.Error1010(self.cl.pos, name) ]
             else:
                 defer = Instance(ref_flag, self.cl.pos, arg, name)
 
@@ -793,7 +681,7 @@ class Parser:
         if defer:
             if defer.flag.type == FlagType.mandatory:
                 # catches -bm -b (bare: -b, man: -m)
-                self.errors += [ Error1010(defer.pos, defer.flag_name) ]
+                self.errors += [ Except.Error1010(defer.pos, defer.flag_name) ]
             else:
                 self.instances += [ defer.instance() ]
             defer = None
@@ -821,14 +709,14 @@ class Parser:
                                                          subpos) ]
                         else:
                             self.errors += [
-                                        Error1013(self.cl.pos, name, input) ]
+                                    Except.Error1013(self.cl.pos, name, input) ]
                     else:
                         try:
                             res = ref_flag.input_match(self.prog, self.cl.pos,
                                                        name, input)
                             self.instances += [ Instance(ref_flag, self.cl.pos,
                                                          arg, name, res) ]
-                        except Error as ex:
+                        except Except.Error as ex:
                             self.errors += [ ex ]
                 else:
                     self.instances += [ Instance(ref_flag, self.cl.pos, arg,
@@ -846,7 +734,7 @@ class Parser:
                 # prev was a bare (short) flag, this is not a flag, so
                 # we need to print an error:
                 self.errors += [
-                            Error1011(defer.pos, defer.flag_name, name[1:]) ]
+                        Except.Error1011(defer.pos, defer.flag_name, name[1:]) ]
             else:
                 if defer.flag.input_match:
                     if isinstance(defer.flag.input_match, str):
@@ -855,15 +743,15 @@ class Parser:
                             defer.flag_input = arg
                             self.instances += [ defer.instance() ]
                         else:
-                            self.errors += [
-                                    Error1013(defer.pos, defer.flag_name, arg) ]
+                            self.errors += [ Except.Error1013(
+                                            defer.pos, defer.flag_name, arg) ]
                     else:
                         try:
                             res = defer.flag.input_match(self.prog, defer.pos,
                                                          defer.flag_name, arg)
                             defer.flag_input = res
                             self.instances += [ defer.instance() ]
-                        except Error as ex:
+                        except Except.Error as ex:
                             self.errors += [ ex ]
                 else:
                     defer.flag_input = arg
@@ -878,24 +766,24 @@ class Parser:
                 if m:
                     self.inputs += [ arg ]
                 elif arg.startswith('-'):
-                    self.errors += [ Error1020(self.cl.pos, name) ]
+                    self.errors += [ Except.Error1020(self.cl.pos, name) ]
                 else:
-                    self.errors += [ Error1021(self.cl.pos, name) ]
+                    self.errors += [ Except.Error1021(self.cl.pos, name) ]
             else:
                 try:
                     res = collect(self.prog, self.cl.pos, name, arg)
                     self.inputs += [ res ]
-                except Error as ex:
+                except Except.Error as ex:
                     if arg.startswith('-'):
-                        self.errors += [ Error1020(self.cl.pos, name) ]
+                        self.errors += [ Except.Error1020(self.cl.pos, name) ]
                     else:
                         self.errors += [ ex ]
 
         else:
             if arg.startswith('-'):
-                self.errors += [ Error1020(self.cl.pos, name) ]
+                self.errors += [ Except.Error1020(self.cl.pos, name) ]
             else:
-                self.errors += [ Error1021(self.cl.pos, name) ]
+                self.errors += [ Except.Error1021(self.cl.pos, name) ]
 
         return (defer, collect)
 
