@@ -37,7 +37,3 @@ Let's Encrypt certificate ``/etc/letsencrypt/live/example.com/cert.pem``
 Certificate renewal will now also automatically renew DANE TLSA
 records, and needs no manual intervention.
 
-In order to revert back to only certificate renewal (and no TLSA record
-creation), simply remove the corresponding target(s) from the configuration
-file ``/etc/alnitak.conf`` and change references to ``/etc/alnitak/dane/...``
-back to ``/etc/letsencrypt/live/...`` in your service configuration file(s).

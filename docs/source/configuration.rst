@@ -31,7 +31,7 @@ With this target in the configuration file, if a certificate in
 ``/etc/letsencrypt/archive/example.com/`` is renewed, *alnitak* will attempt
 to create a TLSA record::
 
-    TLSA 3 1 1 _443._tcp.example.com
+    TLSA 3 1 1 _443._tcp.example.com  certificate_data...
 
 A target is constructed from the domain directory name that the Let's Encrypt
 certificates are located in as a section header::
@@ -50,19 +50,16 @@ A ``tlsa`` parameter requires the concatenated parameters of the TLSA record
 order), the port the service is running on, and optionally an explicit
 protocol for the service and the domain to appear in the record.
 If no protocol is explicitly specified, "tcp" is assumed; and if no domain
-``RECORD_DATA_DOMAIN`` is explicitly specified, the target's domain
-``DOMAIN`` is used.
+``RECORD_DATA_DOMAIN`` is explicitly specified, the domain in the target's
+section header is used (``DOMAIN``).
 
 Note that only usage fields '2' (DANE-TA) and '3' (DANE-EE) are supported.
 Selector field inputs '0' and '1' are both supported, as well as the matching
 type fields '0', '1' and '2'. Hence, ``PARAMS`` can take any value given by
 the regex: "[23][01][012]".
 
-Examples
-++++++++
-
 Example 1
----------
++++++++++
 
 Target::
 
@@ -71,13 +68,13 @@ Target::
 
 will trigger the TLSA record::
 
-    TLSA 3 1 1 _25._tcp.smtp.example.com
+    TLSA 3 1 1 _25._tcp.smtp.example.com  certificate_data...
 
 to be created when certificates in ``/etc/letsencrypt/archive/example.com``
 are renewed.
 
 Example 2
----------
++++++++++
 
 Target::
 
@@ -88,9 +85,9 @@ Target::
 
 will trigger the TLSA records::
 
-    TLSA 3 1 2 _443.tcp.example.com
-    TLSA 3 0 0 _8443.udp.example.com
-    TLSA 2 1 1 _443.tcp.www.example.com
+    TLSA 3 1 2 _443.tcp.example.com  certificate_data...
+    TLSA 3 0 0 _8443.udp.example.com  certificate_data...
+    TLSA 2 1 1 _443.tcp.www.example.com  certificate_data...
 
 to be created when certificates in ``/etc/letsencrypt/archive/example.com``
 are renewed.
@@ -186,7 +183,7 @@ Under either operation, the environment will contain:
 
 * ``PATH``: set to ``"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"``
 * ``IFS``: set to ``" \t\n"``
-* ``LE_DIR``: set to the Let's Encrypt directory (typically
+* ``LETSENCRYPT_DIR``: set to the Let's Encrypt directory (typically
   ``/etc/letsencrypt``). This is provided in case the program being called
   needs to do something with the certificates in the Let's Encrypt directory;
   this parameter provides the program with the parent directory from which
@@ -346,8 +343,8 @@ The ``cloudflare`` API scheme is specified either like::
 
     api = cloudlfare email:EMAIL key:KEY
 
-where ``ZONE`` and ``KEY`` are the credentials required to use
-Cloudflare's API; or alternatively::
+where ``EMAIL`` and ``KEY`` are your Cloudflare API login credentials;
+or alternatively::
 
     api = cloudflare FILE
 
@@ -385,7 +382,7 @@ file::
     dane_directory = /dir
 
 will set the directory in which the dane certificates will be located to
-``/dir/dane/``. The default value is ``/etc/alnitak/``. The command-line
+``/dir``. The default value is ``/etc/alnitak/dane``. The command-line
 equivalent is the flag ``--dane-directory`` (or ``-D``).
 
 ::
@@ -411,12 +408,12 @@ The command-line equivalent is the flag ``--ttl`` (or ``-t``).
 will set the logging level to the desired value (``normal`` is the default).
 The only difference between setting the logging level in the configuration
 file instead of at the command line (via the ``-L`` or ``--log-level``
-flags) is that certain logging output from the reading of the
+flag) is that certain logging output from the reading of the
 configuration file itself will be missed. This is often not an issue, since
 the filesystem/DNS actions of the program are the real targets of the
 logging mechanisms.
 If, however, you do want to capture configuration file parsing in the log
-file, then you must use command-line flags.
+file, then you must use the equivalent command-line flag instead.
 
 
 .. _ConfCertbot:
@@ -428,8 +425,8 @@ Certbot
 to ensure that certificates being used by a service do not break DANE
 authentication (see :ref:`HAW` for more details).
 As such, whenever *alnitak* is being used to manage DANE TLSA records, all
-certbot renewals **must** call *alnitak* on these hooks in order for DANE to
-continue working.
+certbot renewals **must** call *alnitak* on these hooks in order for DANE
+authentication to continue working.
 
 When running certbot explicitly, simply ensure the hooks are specified::
 
@@ -464,9 +461,9 @@ it is not necessary.
 
 .. warning::
 
-   Do not run ``alnitak deploy`` on certbot's post hook. *Alnitak* needs to
+   Do not run ``alnitak deploy`` on certbot's post-hook. *Alnitak* needs to
    know which domains were renewed, and the environment parameter
-   ``RENEWED_DOMAINS`` is not set on the post hook; it is only set on the
+   ``RENEWED_DOMAINS`` is not set on the post-hook; it is only set on the
    deploy hook.
    Older versions of certbot may be in conflict with this prescription.
    Ensure that ``alnitak deploy`` runs on whichever hook sets
