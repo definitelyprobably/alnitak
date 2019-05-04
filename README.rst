@@ -12,6 +12,9 @@ Documentation is provided at https://alnitak.readthedocs.io/en/latest/.
     :target: https://alnitak.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
+.. image:: https://travis-ci.org/definitelyprobably/alnitak.svg?branch=master
+    :target: https://travis-ci.org/definitelyprobably/alnitak
+
 
 Licence
 =======
