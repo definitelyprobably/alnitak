@@ -2,6 +2,16 @@
  Alnitak Changelog
 ===================
 
+0.2
+===
+
+* Many bugfixes.
+* Improved the API schemes functionality.
+* Custom command-line parser.
+* Custom logger.
+* Changed command-line behaviour.
+* Added printing of TLSA records.
+
 0.1.7
 =====
 
