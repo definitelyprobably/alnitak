@@ -6,6 +6,13 @@
 This program is designed to help manage `DANE (TLSA) <https://tools.ietf.org/html/rfc6698>`_ records on a server using `Let's Encrypt <https://letsencrypt.org/>`_ certificates. Specifically, if you are thinking of using DANE to secure a service encrypted with Let's Encrypt certificates, you will at least need a reliable way to update your DNS TLSA records when your TLS certificates are renewed. This program can help you do this.
 
 
+Documentation is provided at https://alnitak.readthedocs.io/en/latest/.
+
+.. image:: https://readthedocs.org/projects/alnitak/badge/?version=latest
+    :target: https://alnitak.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
+
 Licence
 =======
 

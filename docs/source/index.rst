@@ -21,10 +21,3 @@ TLSA records when Let's Encrypt certificates are renewed.
    running
    logging
 
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
