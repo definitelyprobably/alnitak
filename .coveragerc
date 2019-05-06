@@ -1,0 +1,10 @@
+[run]
+branch = True
+source = alnitak
+
+[report]
+exclude_lines =
+	pragma: no cover
+ignore_errors = True
+omit =
+	alnitak/tests/*

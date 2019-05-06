@@ -604,7 +604,7 @@ def process_data_posthook_not_renewed(prog, group):
 
     for l in group.post:
         if l.pending == '0':
-            prog.log.info1(" ++ pending state is 0: ({}): deleting old TLSA DNS record".format(l.tlsa.pstr()))
+            prog.log.info1(" ++ pending state is 0: ({}): need to delete old TLSA DNS record".format(l.tlsa.pstr()))
 
             # cert: if set inside the try block, then use it in the
             # except catches.
