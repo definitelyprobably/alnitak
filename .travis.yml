@@ -16,7 +16,7 @@ install:
     - python setup.py develop
 
 script:
-    - pytest --cov=./
+    - pytest --cov=./alnitak
 
 after_sucess:
-    - codecov
+    - bash <(curl -s https://codecov.io/bash)

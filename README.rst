@@ -15,6 +15,20 @@ Documentation is provided at https://alnitak.readthedocs.io/en/latest/.
 .. image:: https://travis-ci.org/definitelyprobably/alnitak.svg?branch=master
     :target: https://travis-ci.org/definitelyprobably/alnitak
 
+.. image:: https://codecov.io/gh/definitelyprobably/alnitak/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/definitelyprobably/alnitak
+
+
+Status
+======
+
+Code is in beta. Program is functional, but more testing is required.
+If you wish to use the program, then you will likely find that the program
+works, but *may* be temperamental to changes in your setup. Thus, it is
+recommended that you check that everything works by forcing a certificate
+renewal, if you can, and to also keep a check on automated renewals, if no
+error reporting mechanisms are not already in place.
+
 
 Licence
 =======
