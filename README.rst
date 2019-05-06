@@ -26,7 +26,7 @@ Code is in beta. Program is functional, but more testing is required.
 If you wish to use the program, then you will likely find that the program
 works, but *may* be temperamental to changes in your setup. Thus, it is
 recommended that you check that everything works by forcing a certificate
-renewal, if you can, and to also keep a check on automated renewals, if no
+renewal, if you can, and to also keep a check on automated renewals, if
 error reporting mechanisms are not already in place.
 
 

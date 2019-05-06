@@ -21,3 +21,13 @@ TLSA records when Let's Encrypt certificates are renewed.
    running
    logging
 
+
+Status
+######
+
+The code is in beta. The program is functional, but more testing is required.
+If you wish to use the program, then you will likely find that the program
+works, but *may* be temperamental to changes in your setup. Thus, it is
+recommended that you check that everything works by forcing a certificate
+renewal, if you can, and to also keep a check on automated renewals, if
+error reporting mechanisms are not already in place.
