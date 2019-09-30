@@ -277,7 +277,7 @@ class Api:
         self.domain = None
 
     def set_domain(self, d):
-        self.domain = d
+        self.domain = '.'.join(list(filter(None, d.split('.')))[-2:])
 
     def __eq__(self, a):
         return (self.type == a.type and self.domain == a.domain)

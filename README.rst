@@ -29,6 +29,11 @@ recommended that you check that everything works by forcing a certificate
 renewal, if you can, and to also keep a check on automated renewals, if
 error reporting mechanisms are not already in place.
 
+.. note::
+    The code is being rewritten from scratch to add functionality and to
+    make a few improvements (esecially to increase its robustness).
+    This will hopefully not take too long -- 2019/10/1
+
 
 Licence
 =======
