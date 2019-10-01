@@ -70,7 +70,7 @@ def read(prog):
                     # the targets. We need to create a NEW object that is
                     # (mostly) the same as the default_api object, and we do
                     # this with the 'copy' method.
-                    target.api.domain = active_section
+                    target.api.set_domain(active_section)
                 for tlsa in default_tlsa_list:
                     tlsa.domain = active_section
                     target.add_tlsa(tlsa)

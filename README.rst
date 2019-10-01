@@ -30,9 +30,10 @@ renewal, if you can, and to also keep a check on automated renewals, if
 error reporting mechanisms are not already in place.
 
 .. note::
-    The code is being rewritten from scratch to add functionality and to
-    make a few improvements (esecially to increase its robustness).
-    This will hopefully not take too long -- 2019/10/1
+
+    The code is being rewritten from scratch. Version 0.3 will add some
+    extra functionality and make some improvements (especially with regards
+    to the weaknesses of robustness of verion 0.2).
 
 
 Licence
