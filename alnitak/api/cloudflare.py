@@ -1,6 +1,6 @@
 
-import re
-import shlex
+import re # XXX used in config code at bottom
+import shlex # XXX used in config code at bottom
 
 from alnitak import exceptions as Except
 from alnitak import prog as Prog
@@ -54,7 +54,7 @@ def get_errors(response):
 
     return errors
 
-def get_zone(prog, api):
+def get_zone(state, domain):
     """Get the zone ID for the domain.
 
     This function will get a zone ID for the domain. It will also initialize
@@ -70,33 +70,45 @@ def get_zone(prog, api):
         DNSProcessingError: raised for all errors encountered.
     """
 
+    target = state.targets[domain]
+    api = target['api']
+
     # if zone is not empty, then we have already initialized
-    if api.zone:
+    if api['zone']:
         return
 
-    prog.log.info2("  + need a zone ID for {}".format(api.domain))
+    #prog.log.info2("  + need a zone ID for {}".format(api.domain))
 
-    params = {'name': api.domain}
+    # Note: the domain that we send to cloudflare should be stripped of
+    # subdomains.
+    #
+    # The code will output:
+    #   example.com      -> example.com
+    #   abc.example.com  -> example.com
+    #   example.com.     -> example.com
+    #   abc.example.com. -> example.com
+    #   ..abc..example..com.. [malformed] -> example.com
+    domain_stripped = '.'.join(list(filter(None, domain.split('.')))[-2:])
+    params = {'name': domain_stripped }
 
     # try native method
     try:
         from CloudFlare import CloudFlare
-        from CloudFlare.exceptions import CloudFlareAPIError
 
-        prog.log.info2("  + using native call(s)...")
+        #prog.log.info2("  + using native call(s)...")
 
-        api.cloudflare = CloudFlare(email=api.email, token=api.key)
+        api['object'] = CloudFlare(email=api['email'], token=api['key'])
 
-        zones = api.cloudflare.zones.get(params=params)
+        zones = api['object'].zones.get(params=params)
         for z in zones:
-            if z['name'] == api.domain:
-                api.zone = z['id']
+            if z['name'] == domain_stripped:
+                api['zone'] = z['id']
                 break
 
-        if not api.zone:
-            raise Except.DNSProcessingError(
+        if not api['zone']:
+            raise exception.AlnitakError(
                     "Cloudflare: no zone with domain '{}' found".format(
-                                                                api.domain))
+                        domain_stripped))
 
         # all done; return explicitly to avoid running the fallback code
         return
@@ -105,74 +117,73 @@ def get_zone(prog, api):
     except ModuleNotFoundError:
         pass
 
-    except CloudFlareAPIError as exc:
+    except CloudFlare.exceptions.CloudFlareAPIError as exc:
         if len(exc) > 0:
             errs = []
             for e in exc:
                 errs += [ "Cloudflare error {}: {}".format(int(e), str(e)) ]
-            raise Except.DNSProcessingError(errs)
+            raise exception.AlnitakError(errs)
         else:
-            raise Except.DNSProcessingError(
+            raise exception.AlnitakError(
                     "Cloudflare error {}: {}".format(int(exc), str(exc)) )
     except KeyError:
-        raise Except.DNSProcessingError("Cloudflare: zone ID not found")
+        raise exception.AlnitakError("Cloudflare: zone ID not found")
 
 
     # the fallback method:
-    prog.log.info2("  + using fallback call(s)...")
+    #prog.log.info2("  + using fallback call(s)...")
 
     import requests
 
-    headers = { "X-Auth-Email": api.email,
-                "X-Auth-Key": api.key,
+    headers = { "X-Auth-Email": api['email'],
+                "X-Auth-Key": api['key'],
                 "Content-Type": "application/json" }
     try:
         r = requests.get("https://api.cloudflare.com/client/v4/zones",
                                                 params=params, headers=headers)
     except ConnectionError:
-        raise Except.DNSProcessingError("connection error encountered")
+        raise exception.AlnitakError("connection error encountered")
     except requests.exceptions.Timeout:
-        raise Except.DNSProcessingError("request timed out")
+        raise exception.AlnitakError("request timed out")
     except requests.exceptions.TooManyRedirects:
-        raise Except.DNSProcessingError("too many redirects")
+        raise exception.AlnitakError("too many redirects")
     except requests.exceptions.RequestException as ex:
-        raise Except.DNSProcessingError("{}".format(ex))
+        raise exception.AlnitakError("{}".format(ex))
 
-    prog.log.info3("  + HTTP response: {}".format(r.status_code))
+    #prog.log.info3("  + HTTP response: {}".format(r.status_code))
 
     response = r.json()
-    prog.log.info3("  + JSON response: {}".format(response))
+    #prog.log.info3("  + JSON response: {}".format(response))
 
     errors = get_errors(response)
     if errors:
-        raise Except.DNSProcessingError(errors)
+        raise exception.AlnitakError(errors)
 
     if r.status_code >= 400 and r.status_code < 600:
-        raise Except.DNSProcessingError(
+        raise exception.AlnitakError(
                 "Cloudflare4 HTTP response was {}".format(r.status_code))
 
     if not response['success']:
-        raise Except.DNSProcessingError(
-                                        "Cloudflare4 JSON response failure")
+        raise exception.AlnitakError("Cloudflare4 JSON response failure")
 
     try:
         for z in response['result']:
-            if z['name'] == api.domain:
-                api.zone = z['id']
+            if z['name'] == domain_stripped:
+                api['zone'] = z['id']
                 break
 
-        if not api.zone:
-            raise Except.DNSProcessingError(
+        if not api['zone']:
+            raise exception.AlnitakError(
                     "Cloudflare: no zone with domain '{}' found".format(
-                                                                api.domain))
+                        domain_stripped))
     except KeyError:
-        raise Except.DNSProcessingError("Cloudflare: zone ID not found")
+        raise exception.AlnitakError("Cloudflare: zone ID not found")
 
-    prog.log.info2("  + zone ID retrieved: '...({})'".format(len(api.zone)))
+    #prog.log.info2("  + zone ID retrieved: '...({})'".format(len(api.zone)))
 
 
 
-def api_delete(prog, api, tlsa, id):
+def api_delete(state, domain, spec, cleanup = None):
     """Delete a DANE TLSA record.
 
     Args:
@@ -185,14 +196,45 @@ def api_delete(prog, api, tlsa, id):
         DNSProcessingError: if an error ocurred at any point that should
             cause the Alnitak to exit with an error exit code.
     """
-    get_zone(prog, api)
+    get_zone(state, domain)
+
+    # get IDs of records that are up
+    if api.cloudflare:
+        ids = cloudflare_native_read(state, domain, spec)
+    else:
+        ids = cloudflare_fallback_read(state, domain, spec)
+
+    # ids is a dict: { 'cert_data': 'id', ... }
+    if cleanup:
+        # delete 'cleanup' unconditionally
+        if cleanup in ids:
+            record_id = ids[cleanup]
+        else:
+            # record to delete is not up; OK, job done for us!
+            state.remove_delete_record(domain, spec, cleanup)
+            return
+    else:
+        record = state.targets[domain]['records'][spec]
+        # check that new is in ids before deleting prev:
+        if record['new']['data'] in ids:
+            record['new']['is_up'] = True
+
+            # check if prev is in ids:
+            if record['prev']['data'] in ids:
+                record_id = ids[record['prev']['data']]
+            else:
+                # record to delete is not up; OK, job done for us!
+                return
+        else:
+            # new record not up, do not delete.
+            return
 
     if api.cloudflare:
-        cloudflare_native_delete(prog, api, tlsa, id)
+        cloudflare_native_delete(state, domain, record_id)
     else:
-        cloudflare_fallback_delete(prog, api, tlsa, id)
+        cloudflare_fallback_delete(state, domain, record_id)
 
-def cloudflare_native_delete(prog, api, tlsa, id):
+def cloudflare_native_delete(state, domain, record_id):
     """Delete a DANE TLSA record using Cloudflare's python API.
 
     Args:
@@ -205,25 +247,27 @@ def cloudflare_native_delete(prog, api, tlsa, id):
         DNSProcessingError: if an error ocurred at any point that should
             cause the Alnitak to exit with an error exit code.
     """
-    prog.log.info2(
-            "  + deleting TLSA record for {} (native)".format(tlsa.pstr()))
+    api = state.targets[domain]['api']
+
+    #prog.log.info2(
+    #        "  + deleting TLSA record for {} (native)".format(tlsa.pstr()))
 
     from CloudFlare.exceptions import CloudFlareAPIError
 
     try:
-        api.cloudflare.zones.dns_records.delete(api.zone, id)
-        prog.log.info2("  + deleting record: success")
+        api['object'].zones.dns_records.delete(api['zone'], record_id)
+        #prog.log.info2("  + deleting record: success")
     except CloudFlareAPIError as exc:
         if len(exc) > 0:
             errs = []
             for e in exc:
                 errs += [ "Cloudflare error {}: {}".format(int(e), str(e)) ]
-            raise Except.DNSProcessingError(errs)
+            raise exception.AlnitakError(errs)
         else:
-            raise Except.DNSProcessingError(
+            raise exception.AlnitakError(
                     "Cloudflare error {}: {}".format(int(exc), str(exc)) )
 
-def cloudflare_fallback_delete(prog, api, tlsa, id):
+def cloudflare_fallback_delete(state, domain, record_id):
     """Delete a DANE TLSA record using Cloudflare's RESTful API.
 
     Args:
@@ -236,46 +280,48 @@ def cloudflare_fallback_delete(prog, api, tlsa, id):
         DNSProcessingError: if an error ocurred at any point that should
             cause the Alnitak to exit with an error exit code.
     """
-    prog.log.info2(
-            "  + deleting TLSA record for {} (fallback)".format(tlsa.pstr()))
+    api = state.targets[domain]['api']
+
+    #prog.log.info2(
+    #        "  + deleting TLSA record for {} (fallback)".format(tlsa.pstr()))
 
     import requests
 
-    headers = { "X-Auth-Email": api.email,
-                "X-Auth-Key": api.key,
+    headers = { "X-Auth-Email": api['email'],
+                "X-Auth-Key": api['key'],
                 "Content-Type": "application/json" }
 
     try:
-        r = requests.delete("https://api.cloudflare.com/client/v4/zones/{}/dns_records/{}".format(api.zone, id), headers=headers)
+        r = requests.delete("https://api.cloudflare.com/client/v4/zones/{}/dns_records/{}".format(api['zone'], record_id), headers=headers)
     except ConnectionError:
-        raise Except.DNSProcessingError("connection error encountered")
+        raise exception.AlnitakError("connection error encountered")
     except requests.exceptions.Timeout:
-        raise Except.DNSProcessingError("request timed out")
+        raise exception.AlnitakError("request timed out")
     except requests.exceptions.TooManyRedirects:
-        raise Except.DNSProcessingError("too many redirects")
+        raise exception.AlnitakError("too many redirects")
     except requests.exceptions.RequestException as ex:
-        raise Except.DNSProcessingError("{}".format(ex))
+        raise exception.AlnitakError("{}".format(ex))
 
-    prog.log.info3("  + HTTP response: {}".format(r.status_code))
+    #prog.log.info3("  + HTTP response: {}".format(r.status_code))
 
     response = r.json()
-    prog.log.info3("  + JSON response: {}".format(
-                        str(response).replace(api.key, '<redacted>')) )
+    #prog.log.info3("  + JSON response: {}".format(
+    #                    str(response).replace(api.key, '<redacted>')) )
 
     errors = get_errors(response)
     if errors:
-        raise Except.DNSProcessingError(errors)
+        raise exception.AlnitakError(errors)
 
     if r.status_code >= 400 and r.status_code < 600:
-        raise Except.DNSProcessingError(
+        raise exception.AlnitakError(
                 "Cloudflare4 HTTP response was {}".format(r.status_code))
 
     if not response['success']:
-        raise Except.DNSProcessingError("Cloudflare4 JSON response failure")
+        raise exception.AlnitakError("Cloudflare4 JSON response failure")
 
 
 
-def api_publish(prog, api, tlsa, hash):
+def api_publish(state, domain, spec):
     """Create (publish) a DANE TLSA record.
 
     Args:
@@ -289,14 +335,14 @@ def api_publish(prog, api, tlsa, hash):
             cause the Alnitak to exit with an error exit code.
         DNSSkipProcessing: if the record is already up.
     """
-    get_zone(prog, api)
+    get_zone(state, domain)
 
-    if api.cloudflare:
-        cloudflare_native_publish(prog, api, tlsa, hash)
+    if api['object']:
+        cloudflare_native_publish(state, domain, spec)
     else:
-        cloudflare_fallback_publish(prog, api, tlsa, hash)
+        cloudflare_fallback_publish(state, domain, spec)
 
-def cloudflare_native_publish(prog, api, tlsa, hash):
+def cloudflare_native_publish(state, domain, spec):
     """Create (publish) a DANE TLSA record using Cloudflare's python API.
 
     Args:
@@ -310,38 +356,44 @@ def cloudflare_native_publish(prog, api, tlsa, hash):
             cause the Alnitak to exit with an error exit code.
         DNSSkipProcessing: if the record is already up.
     """
-    prog.log.info2(
-            "  + publishing TLSA record for {} (native)".format(tlsa.pstr()))
+    target = state.targets[domain]
+    api = target['api']
+    record = target['records'][spec]
 
-    from CloudFlare.exceptions import CloudFlareAPIError
+    #prog.log.info2(
+    #        "  + publishing TLSA record for {} (native)".format(tlsa.pstr()))
 
     try:
-        api.cloudflare.zones.dns_records.post(api.zone,
+        api['object'].zones.dns_records.post(api['zone'],
                 data={
-                    "type": "TLSA",
-                    "name": "_{}._{}.{}".format(tlsa.port, tlsa.protocol,
-                                                tlsa.domain),
-                    "data": {
-                        "usage": int(tlsa.usage),
-                        "selector": int(tlsa.selector),
-                        "matching_type": int(tlsa.matching),
-                        "certificate": hash
+                    'type': 'TLSA',
+                    'name': '_{}._{}.{}'.format(record['port'],
+                                                record['protocol'],
+                                                record['domain']),
+                    'data': {
+                        'usage': int(record['params']['usage']),
+                        'selector': int(record['params']['selector']),
+                        'matching_type': int(record['params']['matching_type']),
+                        'certificate': record['new']['data']
                         }
                     })
-        prog.log.info2("  + publishing record: success")
-    except CloudFlareAPIError as exc:
+        #prog.log.info2("  + publishing record: success")
+    except CloudFlare.exceptions.CloudFlareAPIError as exc:
         if len(exc) > 0:
             errs = []
             for e in exc:
                 errs += [ "Cloudflare error {}: {}".format(int(e), str(e)) ]
-            raise Except.DNSProcessingError(errs)
+            raise exception.AlnitakError(errs)
+
+        # 81057: record already exists
+        # we don't need to do anything here
         elif int(exc) == 81057:
-            raise Except.DNSSkipProcessing(str(exc))
+            return
         else:
-            raise Except.DNSProcessingError(
+            raise exception.AlnitakError(
                     "Cloudflare error {}: {}".format(int(exc), str(exc)) )
 
-def cloudflare_fallback_publish(prog, api, tlsa, hash):
+def cloudflare_fallback_publish(state, domain, spec):
     """Create (publish) a DANE TLSA record using Cloudflare's RESTful API.
 
     Args:
@@ -355,35 +407,46 @@ def cloudflare_fallback_publish(prog, api, tlsa, hash):
             cause the Alnitak to exit with an error exit code.
         DNSSkipProcessing: if the record is already up.
     """
-    prog.log.info2(
-            "  + publishing TLSA record for {} (fallback)".format(tlsa.pstr()))
+    target = state.targets[domain]
+    api = target['api']
+    record = target['records'][spec]
+
+    #prog.log.info2(
+    #        "  + publishing TLSA record for {} (fallback)".format(tlsa.pstr()))
 
     import requests
 
-    headers = { "X-Auth-Email": api.email,
-                "X-Auth-Key": api.key,
+    headers = { "X-Auth-Email": api['email'],
+                "X-Auth-Key": api['key'],
                 "Content-Type": "application/json" }
 
-    data = '{{ "type": "TLSA", "name": "_{}._{}.{}", "data": {{ "usage": {}, "selector": {}, "matching_type": {}, "certificate": "{}" }} }}'.format(
-                    tlsa.port, tlsa.protocol, tlsa.domain, tlsa.usage,
-                    tlsa.selector, tlsa.matching, hash)
+    data = { 'type': 'TLSA',
+             'name': '_{}._{}.{}'.format(record['port'], record['protocol'],
+                                         record['domain']),
+             'data': {
+                 'usage': int(record['params']['usage']),
+                 'selector': int(record['params']['selector']),
+                 'matching_type': int(record['params']['matching_type']),
+                 'certificate': record['new']['data']
+                 }
+             }
 
     try:
-        r = requests.post("https://api.cloudflare.com/client/v4/zones/{}/dns_records".format(api.zone), data=data, headers=headers)
+        r = requests.post("https://api.cloudflare.com/client/v4/zones/{}/dns_records".format(api['zone']), data=data, headers=headers)
     except ConnectionError:
-        raise Except.DNSProcessingError("connection error encountered")
+        raise exception.AlnitakError("connection error encountered")
     except requests.exceptions.Timeout:
-        raise Except.DNSProcessingError("request timed out")
+        raise exception.AlnitakError("request timed out")
     except requests.exceptions.TooManyRedirects:
-        raise Except.DNSProcessingError("too many redirects")
+        raise exception.AlnitakError("too many redirects")
     except requests.exceptions.RequestException as ex:
-        raise Except.DNSProcessingError("{}".format(ex))
+        raise exception.AlnitakError("{}".format(ex))
 
-    prog.log.info3("  + HTTP response: {}".format(r.status_code))
+    #prog.log.info3("  + HTTP response: {}".format(r.status_code))
 
     response = r.json()
-    prog.log.info3("  + JSON response: {}".format(
-                                str(response).replace(api.key, '<redacted>')) )
+    #prog.log.info3("  + JSON response: {}".format(
+    #                            str(response).replace(api.key, '<redacted>')) )
 
     errors = get_errors(response)
 
@@ -391,54 +454,21 @@ def cloudflare_fallback_publish(prog, api, tlsa, hash):
     if len(errors) == 1 and errors[0][0] == 81057:
         # we will only accept this code if it is the only error
         # encountered
-        raise Except.DNSSkipProcessing(errors[0][1])
+        return
 
     if errors:
-        raise Except.DNSProcessingError(errors)
+        raise exception.AlnitakError(errors)
 
     if r.status_code >= 400 and r.status_code < 600:
-        raise Except.DNSProcessingError(
+        raise exception.AlnitakError(
                 "Cloudflare4 HTTP response was {}".format(r.status_code))
 
     if not response['success']:
-        raise Except.DNSProcessingError("Cloudflare4 JSON response failure")
+        raise exception.AlnitakError("Cloudflare4 JSON response failure")
 
 
 
-def api_read(prog, api, tlsa):
-    """Get a dict of DANE TLSA records that are up.
-
-    For example, if the following TLSA records are up:
-        TLSA 3 1 1 _25._tcp.example.com  abcABC
-        TLSA 3 1 1 _25._tcp.example.come defDEF
-    and 'tlsa' has param '311', port '25', protocol 'tcp' and domain
-    'example.com', then this function will return:
-        { "abcABC": "id...", "defDEF": "id..." }
-    where "id..." will be some unique ID Cloudflare has assigned to that
-    record.
-
-    Args:
-        prog (State): not changed.
-        api (ApiCloudflare): contains Cloudflare login details.
-        tlsa (Tlsa): details of the DANE TLSA record to retrieve.
-
-    Returns:
-        dict: keys are the certificate hashes and values are the ID numbers
-            assigned to it by Cloudflare.
-
-    Raises:
-        DNSProcessingError: if an error ocurred at any point that should
-            cause the Alnitak to exit with an error exit code.
-        DNSNotLive: if no matching records are up.
-    """
-    get_zone(prog, api)
-
-    if api.cloudflare:
-        return cloudflare_native_read(prog, api, tlsa)
-    else:
-        return cloudflare_fallback_read(prog, api, tlsa)
-
-def cloudflare_native_read(prog, api, tlsa):
+def cloudflare_native_read(state, domain, spec):
     """Get a dict of DANE TLSA records that are up.
 
     For example, if the following TLSA records are up:
@@ -464,39 +494,43 @@ def cloudflare_native_read(prog, api, tlsa):
             cause the Alnitak to exit with an error exit code.
         DNSNotLive: if no matching records are up.
     """
-    prog.log.info2("  + getting TLSA records for _{}._{}.{} (native)".format(
-                                        tlsa.port, tlsa.protocol, tlsa.domain))
+    target = state.targets[domain]
+    api = target['api']
+    record = target['records'][spec]
+
+    #prog.log.info2("  + getting TLSA records for _{}._{}.{} (native)".format(
+    #                                    tlsa.port, tlsa.protocol, tlsa.domain))
 
     from CloudFlare.exceptions import CloudFlareAPIError
 
     try:
-        records = api.cloudflare.zones.dns_records.get(api.zone,
+        records = api['object'].zones.dns_records.get(api['zone'],
                 params={
                     "type": "TLSA",
-                    "name": "_{}._{}.{}".format(tlsa.port, tlsa.protocol,
-                                                tlsa.domain)
+                    "name": "_{}._{}.{}".format(record['port'],
+                                                record['protocol'],
+                                                record['domain'])
                     })
-        prog.log.info3("  + JSON response: {}".format(
-                                str(records).replace(api.key, '<redacted>')) )
-        prog.log.info2("  + retrieving records: success")
+        #prog.log.info3("  + JSON response: {}".format(
+        #                        str(records).replace(api.key, '<redacted>')) )
+        #prog.log.info2("  + retrieving records: success")
     except CloudFlareAPIError as exc:
         if len(exc) > 0:
             errs = []
             for e in exc:
                 errs += [ "Cloudflare error {}: {}".format(int(e), str(e)) ]
-            raise Except.DNSProcessingError(errs)
+            raise exception.AlnitakError(errs)
         else:
-            raise Except.DNSProcessingError(
+            raise exception.AlnitakError(
                     "Cloudflare error {}: {}".format(int(exc), str(exc)) )
 
-    ret = { r['data']['certificate'].lower(): r['id'] for r in records
-                if str(r['data']['usage']) == str(tlsa.usage)
-                    and str(r['data']['selector']) == str(tlsa.selector)
-                    and str(r['data']['matching_type']) == str(tlsa.matching) }
-    if ret:
-        return ret
-
-    raise Except.DNSNotLive("no TLSA records found")
+    return { r['data']['certificate'].lower(): r['id']
+                for r in records
+                    if str(r['data']['usage']) == str(record['usage'])
+                        and str(r['data']['selector'])
+                                == str(record['selector'])
+                        and str(r['data']['matching_type'])
+                                == str(record['matching_type']) }
 
 def cloudflare_fallback_read(prog, api, tlsa):
     """Get a dict of DANE TLSA records that are up.
@@ -524,59 +558,63 @@ def cloudflare_fallback_read(prog, api, tlsa):
             cause the Alnitak to exit with an error exit code.
         DNSNotLive: if no matching records are up.
     """
-    prog.log.info2("  + getting TLSA records for _{}._{}.{} (fallback)".format(
-                                        tlsa.port, tlsa.protocol, tlsa.domain))
+    target = state.targets[domain]
+    api = target['api']
+    record = target['records'][spec]
+
+    #prog.log.info2("  + getting TLSA records for _{}._{}.{} (fallback)".format(
+    #                                    tlsa.port, tlsa.protocol, tlsa.domain))
 
     import requests
 
-    headers = { "X-Auth-Email": api.email,
-                "X-Auth-Key": api.key,
+    headers = { "X-Auth-Email": api['email'],
+                "X-Auth-Key": api['key'],
                 "Content-Type": "application/json" }
 
     params = { "type": "TLSA",
-               "name":"_{}._{}.{}".format(
-                                      tlsa.port, tlsa.protocol, tlsa.domain) }
+               "name":"_{}._{}.{}".format(record['port'],
+                                          record['protocol'],
+                                          record['domain']) }
 
     try:
-        r = requests.get("https://api.cloudflare.com/client/v4/zones/{}/dns_records".format(api.zone), params=params, headers=headers)
+        r = requests.get("https://api.cloudflare.com/client/v4/zones/{}/dns_records".format(api['zone']), params=params, headers=headers)
     except ConnectionError:
-        raise Except.DNSProcessingError("connection error encountered")
+        raise exception.AlnitakError("connection error encountered")
     except requests.exceptions.Timeout:
-        raise Except.DNSProcessingError("request timed out")
+        raise exception.AlnitakError("request timed out")
     except requests.exceptions.TooManyRedirects:
-        raise Except.DNSProcessingError("too many redirects")
+        raise exception.AlnitakError("too many redirects")
     except requests.exceptions.RequestException as ex:
-        raise Except.DNSProcessingError("{}".format(ex))
+        raise exception.AlnitakError("{}".format(ex))
 
-    prog.log.info3("  + HTTP response: {}".format(r.status_code))
+    #prog.log.info3("  + HTTP response: {}".format(r.status_code))
 
     response = r.json()
-    prog.log.info3("  + JSON response: {}".format(
-                                str(response).replace(api.key, '<redacted>')) )
+    #prog.log.info3("  + JSON response: {}".format(
+    #                            str(response).replace(api.key, '<redacted>')) )
 
     errors = get_errors(response)
     if errors:
-        raise Except.DNSProcessingError(errors)
+        raise exception.AlnitakError(errors)
 
     if r.status_code >= 400 and r.status_code < 600:
-        raise Except.DNSProcessingError(
+        raise exception.AlnitakError(
                 "Cloudflare4 HTTP response was {}".format(r.status_code))
 
     if not response['success']:
-        raise Except.DNSProcessingError("Cloudflare4 JSON response failure")
+        raise exception.AlnitakError("Cloudflare4 JSON response failure")
 
-    ret = { r['data']['certificate'].lower(): r['id']
+    return { r['data']['certificate'].lower(): r['id']
             for r in response['result']
-                if str(r['data']['usage']) == str(tlsa.usage)
-                    and str(r['data']['selector']) == str(tlsa.selector)
-                    and str(r['data']['matching_type']) == str(tlsa.matching) }
-    if ret:
-        return ret
-
-    raise Except.DNSNotLive("no TLSA records found")
+                if str(r['data']['usage']) == str(record['usage'])
+                    and str(r['data']['selector'])
+                            == str(record['selector'])
+                    and str(r['data']['matching_type'])
+                            == str(record['matching_type']) }
 
 
 
+# XXX
 def get_api(prog, domain, input_list, state):
     """Create an ApiCloudflare object from a config file line.
 
@@ -629,6 +667,7 @@ def get_api(prog, domain, input_list, state):
 
     return api
 
+# XXX
 def read_cloudflare_api_file(prog, file, state):
     """Read the input file for Cloudflare login details.
 
@@ -702,6 +741,7 @@ def read_cloudflare_api_file(prog, file, state):
 
     return ret
 
+# XXX
 def is_api_cloudflare_input_email(prog, inp, api):
     """Test input for Cloudflare email and set in the api object if so.
 
@@ -721,6 +761,7 @@ def is_api_cloudflare_input_email(prog, inp, api):
         return True
     return False
 
+# XXX
 def is_api_cloudflare_input_key(prog, inp, api):
     """Test input for Cloudflare key and set in the api object if so.
 
@@ -740,5 +781,4 @@ def is_api_cloudflare_input_key(prog, inp, api):
         api.key = inp[4:]
         return True
     return False
-
 

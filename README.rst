@@ -3,8 +3,9 @@
  Alnitak
 =========
 
-This program is designed to help manage `DANE (TLSA) <https://tools.ietf.org/html/rfc6698>`_ records on a server using `Let's Encrypt <https://letsencrypt.org/>`_ certificates. Specifically, if you are thinking of using DANE to secure a service encrypted with Let's Encrypt certificates, you will at least need a reliable way to update your DNS TLSA records when your TLS certificates are renewed. This program can help you do this.
+This branch is the development branch for version 0.3.
 
+This program is designed to help manage `DANE (TLSA) <https://tools.ietf.org/html/rfc6698>`_ records on a server using `Let's Encrypt <https://letsencrypt.org/>`_ certificates. Specifically, if you are thinking of using DANE to secure a service encrypted with Let's Encrypt certificates, you will at least need a reliable way to update your DNS TLSA records when your TLS certificates are renewed. This program can help you do this.
 
 Documentation is provided at https://alnitak.readthedocs.io/en/latest/.
 
@@ -12,28 +13,24 @@ Documentation is provided at https://alnitak.readthedocs.io/en/latest/.
     :target: https://alnitak.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-.. image:: https://travis-ci.org/definitelyprobably/alnitak.svg?branch=master
+.. image:: https://travis-ci.org/definitelyprobably/alnitak.svg?branch=devel-0.3
     :target: https://travis-ci.org/definitelyprobably/alnitak
 
-.. image:: https://codecov.io/gh/definitelyprobably/alnitak/branch/master/graph/badge.svg
+.. image:: https://codecov.io/gh/definitelyprobably/alnitak/branch/devel-0.3/graph/badge.svg
   :target: https://codecov.io/gh/definitelyprobably/alnitak
 
 
 Status
 ======
 
-Code is in beta. Program is functional, but more testing is required.
-If you wish to use the program, then you will likely find that the program
-works, but *may* be temperamental to changes in your setup. Thus, it is
-recommended that you check that everything works by forcing a certificate
-renewal, if you can, and to also keep a check on automated renewals, if
-error reporting mechanisms are not already in place.
-
-.. note::
-
-    The code is being rewritten from scratch. Version 0.3 will add some
-    extra functionality and make some improvements (especially with regards
-    to the weaknesses of robustness of verion 0.2).
+- [X] core backend operations
+- [ ] backend: printing records
+- [ ] backend: editing state file
+- [ ] backend: editing config file
+- [ ] frontend operations: command-line parser
+- [ ] frontend operations: config file
+- [ ] frontend operations: state file
+- [ ] logging
 
 
 Licence
