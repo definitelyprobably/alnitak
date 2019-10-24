@@ -1,5 +1,4 @@
 
-from alnitak import state
 from alnitak import fsops
 
 
@@ -30,24 +29,6 @@ def deploy(state):
     fsops.set_renewed(state)
 
     fsops.process_deployed(state)
-
-
-def OLD():
-    exec_list = [] # ...
-
-    for prog_call in exec_list:
-        retval = prog_call(prog)
-
-        errors = False
-        if retval == state.RetVal.ok:
-            continue
-        elif retval == state.RetVal.continue_failure:
-            errors = True
-        else:
-            return retval
-
-        if errors:
-            return state.RetVal.continue_failure
 
 
 def printt():

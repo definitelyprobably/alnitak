@@ -4,7 +4,7 @@ from pathlib import Path
 
 def mkdir(path, parents=False):
     try:
-        path.mkdir(parents=parents)
+        Path(path).mkdir(parents=parents)
     except FileExistsError:
         # not a problem
         pass
@@ -228,7 +228,7 @@ wApIvJSwtmVi4MFU5aMqrSDE6ea73Mj2tcMyo5jMd6jmeWUHK8so/joWUoHOUgwu
 X4Po1QYz+3dszkDqMp4fklxBwXRsW10KXzPMTZ+sOPAveyxindmjkW8lGy+QsRlG
 PfZ+G6Z6h7mjem0Y+iWlkYcV4PIWL1iwBi8saCbGS5jN2p8M+X+Q7UNKEkROb3N6
 KOqkqm57TH2H3eDJAkSnh6/DNFu0Qg==''',
-        live=1, recreate=True, force=False):
+        live=1, recreate=True, force=False, bad=False):
     '''
         base: the base directory the test files will be created in. Parent
                 directories will not be created.
@@ -239,6 +239,8 @@ KOqkqm57TH2H3eDJAkSnh6/DNFu0Qg==''',
                 cert.pem file. Likewise for the other pem files.
         recreate: whether to remove and then re-link the live pem files.
         force: in addition to 'recreate', also overwrite the archive pem files.
+        bad: create misconfigured domain directories that will test various
+                failures.
     '''
 
     base_path = Path(base)
@@ -285,6 +287,13 @@ privkey {}
         symlink(le_domain_path[d]['live'], 'chain', d, live, recreate or force)
         symlink(le_domain_path[d]['live'], 'fullchain', d, live, recreate or force)
         symlink(le_domain_path[d]['live'], 'privkey', d, live, recreate or force)
+
+    if bad:
+        # create x.com in archive only
+        mkdir(le_archive_path / 'x.com')
+
+        # create y.com in live only
+        mkdir(le_live_path / 'y.com')
 
     return le_path
 
@@ -359,4 +368,51 @@ def check_state_dirs(state, domain,
 
 def check_state_certs(state, domain, certs):
     assert state.targets[domain]['certs'] == certs
+
+def setup_exec(base='.alnitak_tests', bin_dir='bin', bin_name='api'):
+    base_path = Path(base)
+    bin_path = base_path / bin_dir
+    api_prog = bin_path / bin_name
+
+    mkdir(base_path)
+    mkdir(bin_path)
+
+    # api N  - exit with code N
+    with open(str(api_prog), 'w') as f:
+        f.write(r'''#!/bin/sh
+if expr match "$1" '^[0-9]\+$' >/dev/null 2>&1; then
+    exit "$1"
+else
+    exit 0
+fi
+''')
+
+    os.chmod(str(api_prog), 0o744)
+
+
+def simulate_renew(base='.alnitak_tests', le_dir='etc/le',
+                   domains=['a.com', 'b.com', 'c.com'], to=None):
+    for d in domains:
+        for c in [ 'cert.pem', 'chain.pem', 'fullchain.pem', 'privkey.pem' ]:
+            cert = path(base) / le_dir / 'live' / d / c
+
+            arx = cert.resolve()
+
+            m = re.match(r'([a-z]+)([0-9])\.pem', arx.name)
+
+            if to:
+                new_arx = "{}{}.pem".format(m.group(1), to)
+            elif m.group(2) == '1':
+                new_arx = "{}2.pem".format(m.group(1))
+            elif m.group(2) == '2':
+                new_arx = "{}3.pem".format(m.group(1))
+            elif m.group(2) == '3':
+                new_arx = "{}1.pem".format(m.group(1))
+            else:
+                new_arx = "{}1.pem".format(m.group(1))
+
+            cert.unlink()
+            cert.symlink_to('../../{}'.format(new_arx))
+
+
 

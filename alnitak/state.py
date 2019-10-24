@@ -330,39 +330,6 @@ class State:
 
 
 
-
-# FIXME: message could be a list of error messages.
-#           if type(message) is list:
-#               for i in message:
-#                   print(i)
-#           else:
-#               print(message)
-class PrintHandler:
-    def __init__(self):
-        self.progname = 'alnitak' # FIXME
-
-    def warning(self, message): # FIXME
-        print("{}: warning: {}".format(self.progname, message), file=sys.stderr)
-
-    def error(self, message): # FIXME
-        print("{}: error: {}".format(self.progname, message), file=sys.stderr)
-
-    def internal_error(self, message): # FIXME
-        print("{}: internal error: {}".format(self.progname, message),
-              file=sys.stderr)
-
-
-class Prog:
-    '''
-    The Prog class records information pertinent to the frontend operations
-    of the program.
-    '''
-    pass
-
-
-
-
-
 class RetVal(Enum):
     """Exit code values."""
     ok = 0
