@@ -32,11 +32,11 @@ class Handler:
         self.errors = []
         self.warnings = []
 
-    def warning(self, message):
-        self.warnings += [ message ]
+    def warning(self, obj):
+        self.warnings += [ obj ]
 
-    def error(self, message):
-        self.errors += [ message ]
+    def error(self, obj):
+        self.errors += [ obj ]
 
 
 def create_testing_base_dir(
@@ -343,11 +343,9 @@ def check_state_domain(state, domain):
         assert d in state.targets
 
 def check_state_dirs(state, domain,
-        dd, ddp, ddc, san, ddd, led, ld, ldd, ad, add, ll):
+        dd, san, ddd, led, ld, ldd, ad, add, ll):
     t = state.targets[domain]
     assert t['dane_directory'] == Path(dd)
-    assert t['dane_directory_processed'] == ddp
-    assert t['dane_directory_created'] == ddc
     assert t['sanitize'] == san
     assert t['dane_domain_directory'] == Path(ddd)
     assert t['letsencrypt_directory'] == Path(led)
@@ -361,10 +359,4 @@ def check_state_dirs(state, domain,
 
 def check_state_certs(state, domain, certs):
     assert state.targets[domain]['certs'] == certs
-
-
-
-
-
-
 

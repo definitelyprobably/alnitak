@@ -50,6 +50,9 @@ class State:
     def set_letsencrypt_directory(self, domain, path):
         self.targets[domain]['letsencrypt_directory'] = path
 
+    def set_sanitize(self, domain):
+        self.targets[domain]['sanitize'] = True
+
     def create_target(self, domain):
         if domain in self.targets:
             return False # FIXME return or raise?
@@ -73,8 +76,6 @@ class State:
                 'dane_directory': Path('/etc/alnitak/dane'),
                 'dane_domain_directory': None,
                     # set in init
-                'dane_directory_processed': False,
-                'dane_directory_created': False,
                 'letsencrypt_directory': Path('/etc/letsencrypt'),
                 'live_directory': None,
                     # set in init
@@ -197,13 +198,17 @@ class State:
 
     def debug_print(self):
         print('~~~~~~ state ~~~~~~~~~~~~~~~~~~~~~')
+        print()
+        print('renewed domains: {}'.format(self.renewed_domains))
+        print('call: {}'.format(self.call))
+        print('log level: {}'.format(self.log_level))
+        print('testing mode: {}'.format(self.testing_mode))
         for d in self.targets:
             target = self.targets[d]
             print()
             print(d)
             print('-'*len(d))
             print('  dane directory:           {}'.format(self.debug_cut_paths(target['dane_directory'])))
-            print('      + processed: {}, created: {}'.format(str(target['dane_directory_processed']), str(target['dane_directory_created'])))
             print('      + sanitize: {}'.format(str(target['sanitize'])))
             print('  dane domain directory:    {}'.format(self.debug_cut_paths(target['dane_domain_directory'])))
             print('  letsencrypt directory:    {}'.format(self.debug_cut_paths(target['letsencrypt_directory'])))

@@ -5,6 +5,7 @@ from datetime import datetime
 
 from alnitak import exception
 from alnitak import certops
+from alnitak.prog import Error
 
 
 # TODO: store the resolved live/archive/dane certs? What about making the
@@ -29,31 +30,11 @@ def init_dane_directory(state):
 
     Args:
         state (state.State): the state object.
-
     '''
-
-    # if there is a duplicate domain, we will only process the first one
-    # and ignore the others. We need to remember which domains have been
-    # processed:
-    processed_domains = []
 
     for d in state.targets:
 
-        if d in processed_domains:
-            if state.handler:
-                state.handler.warning("domain '{}' already processed; will ignore this config entry".format(d))
-                # Note: it's the job of the frontend operations to ensure that
-                # there are no duplicated entries. We will just print a
-                # warning here and continue.
-                continue
-
-        processed_domains += [ d ]
-
         target = state.targets[d]
-
-        if target['dane_directory_processed']:
-            continue
-        target['dane_directory_processed'] = True
 
         # set letsencrypt live directories:
         target['live_directory'] = target['letsencrypt_directory'] / 'live'
@@ -99,8 +80,7 @@ def create_dane_directory(state, domain):
     an error.
 
     Args:
-        state (state.State): state object. The 'dane_directory_created'
-            key is set to True if the DD had to be created.
+        state (state.State): state object.
         domain (str): the letsencrypt domain directory name.
 
     Raises:
@@ -110,21 +90,17 @@ def create_dane_directory(state, domain):
 
     try:
         target['dane_directory'].mkdir(mode=0o700, parents=True)
-        target['dane_directory_created'] = True
     except FileExistsError as ex:
         # Note: this catch can be removed for python 3.5+ since mkdir()
         # accepts the 'exist_ok' parameter.
-        if target['dane_directory'].is_dir():
-            # if directory exists, that is fine
-            target['dane_directory_created'] = False
-        else:
-            raise exception.AlnitakError(
+        if not target['dane_directory'].is_dir():
+            raise exception.AlnitakError( Error(1000,
                     "creating dane directory '{}' failed: {}".format(
-                        ex.filename, ex.strerror.lower() ))
+                        ex.filename, ex.strerror.lower() ) ))
     except OSError as ex:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(1001,
                 "creating dane directory '{}' failed: {}".format(
-                    ex.filename, ex.strerror.lower() ))
+                    ex.filename, ex.strerror.lower() ) ))
 
 
 def change_dane_directory_permissions(state, domain):
@@ -147,16 +123,16 @@ def change_dane_directory_permissions(state, domain):
     try:
         target['dane_directory'].chmod(0o700)
     except OSError as ex:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(1010,
                 "changing permissions of dane directory '{}' failed: {}".format(
-                    ex.filename, ex.strerror.lower() ))
+                    ex.filename, ex.strerror.lower() ) ))
     try:
         if not state.testing_mode:
             os.chown(str(target['dane_directory']), 0, 0)
     except OSError as ex:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(1011,
                 "changing owner of dane directory '{}' failed: {}".format(
-                    ex.filename, ex.strerror.lower() ))
+                    ex.filename, ex.strerror.lower() ) ))
 
 
 def create_dane_domain_directory(state, domain):
@@ -176,15 +152,15 @@ def create_dane_domain_directory(state, domain):
 
     # check for domain in the letsencrypt live directory
     if not target['live_domain_directory'].exists():
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(1020,
                 "target domain '{}' not found in letsencrypt live directory '{}'".format(
-                    domain, target['live_domain_directory']) )
+                    domain, target['live_domain_directory'] ) ))
 
     # check for domain in the letsencrypt archive directory
     if not target['archive_domain_directory'].exists():
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(1021,
                 "target domain '{}' not found in letsencrypt archive directory '{}'".format(
-                    domain, target['archive_domain_directory']) )
+                    domain, target['archive_domain_directory'] ) ))
 
     try:
         # create the dane domain directory
@@ -193,13 +169,13 @@ def create_dane_domain_directory(state, domain):
         if target['dane_domain_directory'].is_dir():
             pass
         else:
-            raise exception.AlnitakError(
+            raise exception.AlnitakError( Error(1022,
                     "creating dane domain directory '{}' failed: {}".format(
-                        ex.filename, ex.strerror.lower() ))
+                        ex.filename, ex.strerror.lower() ) ))
     except OSError as ex:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(1023,
                 "creating dane domain directory '{}' failed: {}".format(
-                    ex.filename, ex.strerror.lower() ))
+                    ex.filename, ex.strerror.lower() ) ))
 
 
 def populate_dane_domain_directory(
@@ -231,9 +207,9 @@ def populate_dane_domain_directory(
                 f.name for f in target['live_domain_directory'].iterdir()
                         if f.is_symlink() and f.is_file() ]
     except OSError as ex:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(1030,
                 "getting live certs in letsencrypt live domain directory '{}' failed: {}".format(
-                    ex.filename, ex.strerror.lower() ))
+                    ex.filename, ex.strerror.lower() ) ))
 
     # create files in the DDD named as the symlinks in the LDD
     for cert in target['live_links']:
@@ -280,14 +256,14 @@ def populate_dane_domain_directory(
                                 # file doesn't exist; ok fine
                                 pass
                             except OSError as ex:
-                                raise exception.AlnitakError(
+                                raise exception.AlnitakError( Error(1031,
                                         "could not remove existing dane file '{}': {}".format(
-                                            ex.filename, ex.strerror.lower() ))
+                                            ex.filename, ex.strerror.lower() )))
                             continue
                     except OSError as ex:
-                        raise exception.AlnitakError(
+                        raise exception.AlnitakError( Error(1032,
                                 "could not resolve the symlink '{}': {}".format(
-                                    ex.filename, ex.strerror.lower() ))
+                                    ex.filename, ex.strerror.lower() ) ))
                 elif not dane_file.is_dir():
                     # otherwise, as long as it's not a (symlink to a)
                     # directory, then remove it and try again...
@@ -297,28 +273,27 @@ def populate_dane_domain_directory(
                         # file doesn't exist; ok fine
                         pass
                     except OSError as ex:
-                        raise exception.AlnitakError(
+                        raise exception.AlnitakError( Error(1033,
                                 "could not remove existing dane file '{}': {}".format(
-                                    ex.filename, ex.strerror.lower() ))
+                                    ex.filename, ex.strerror.lower() ) ))
                     continue
                 else:
                     # it it's a directory, we don't want to potentially
                     # delete a who bunch of files that could be anything;
                     # so we abort
-                    raise exception.AlnitakError(
+                    raise exception.AlnitakError( Error(1034,
                             "dane cert '{}' exists as a directory; cannot continue.".format(
-                                dane_file) )
+                                dane_file) ))
             except OSError as ex:
-                raise exception.AlnitakError(
+                raise exception.AlnitakError( Error(1035,
                         "creating symlink '{}' failed: {}".format(
-                            ex.filename, ex.strerror.lower() ))
+                            ex.filename, ex.strerror.lower() ) ))
 
             break
         else:
-            raise exception.AlnitakError(
+            raise exception.AlnitakError( Error(1036,
                     "dane cert '{}' is incompatible; manual removal is required".format(
-                        dane_file) )
-
+                        dane_file) ))
 
 
 
@@ -393,8 +368,6 @@ def cleanup_prev_state(state, prev_state):
                                 target['progress'] ))
 
 
-
-
 # TODO: docs
 def set_renewed(state):
     '''
@@ -414,14 +387,14 @@ def set_renewed(state):
             curr_live = target['live_domain_directory'] / cert
 
             if not curr_live.is_symlink():
-                raise exception.AlnitakError(
+                raise exception.AlnitakError( Error(1040,
                         "live certificate '{}' is not a symlink".format(
-                            curr_live))
+                            curr_live ) ))
 
             if curr_live.is_dir():
-                raise exception.AlnitakError(
+                raise exception.AlnitakError( Error(1041,
                         "live certificate '{}' does not point to a file".format(
-                            curr_live))
+                            curr_live ) ))
 
             # get current archive certificate
             try:
@@ -430,9 +403,9 @@ def set_renewed(state):
                 # resolved archive must be in LE dir:
                 if ( curr_archive.parent !=
                             resolve(target['archive_domain_directory']) ):
-                    raise exception.AlnitakError(
+                    raise exception.AlnitakError( Error(1042,
                         "archive cert '{}' not in letsencrypt directory '{}'".format(
-                            curr_archive, target['archive_domain_directory'] ))
+                            curr_archive, target['archive_domain_directory'] )))
 
 
                 # if current (resolved) archive does not match the (resolved)
@@ -454,9 +427,9 @@ def set_renewed(state):
                         added_to_renewed = True
 
             except exception.AlnitakResolveError as ex:
-                raise exception.AlnitakError(
+                raise exception.AlnitakError( Error(1043,
                         "could not resolve '{}': {}".format(
-                            ex.filename, ex.strerror.lower() ))
+                            ex.filename, ex.strerror.lower() ) ))
 
 
 # TODO: docs
@@ -534,18 +507,6 @@ def process_deployed(state):
             if state.handler:
                 state.handler.error(ex.message)
 
-
-
-
-### Record
-#    spec = { 'usage': 3, 'selector': 1, 'matching_type': 1, 'concat': '311' }
-#    port = 25
-#    protocol = 'tcp'
-#    domain = 'example.com'
-#    prev = { 'data': 'abcdef0123456789', ... }
-#    new = { 'data': '1234567890abcdef', ... }
-#    published = True
-#    time = 100
 
 # TODO: docs
 def set_cert_data(state, domain, update=False):
@@ -674,7 +635,6 @@ def publish_records(state, domain):
             if state.handler:
                 state.handler.error(ex.message)
 
-
 # TODO: docs
 def delete_records(state, domain):
     '''
@@ -750,8 +710,6 @@ def process_deletes(state):
                     # not stop future calls from processing the record.
                     if state.handler:
                         state.handler.error(ex.message)
-
-
 
 
 def relative_to(base, target):
@@ -836,20 +794,20 @@ def set_certs(state, domain, cert, dane_file):
     try:
         archive_resolved = resolve(target['certs'][cert]['live'])
     except exception.AlnitakResolveError as ex:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(1050,
                 "live cert '{}' could not be resolved: {}".format(
-                    ex.filename, ex.strerror.lower() ))
+                    ex.filename, ex.strerror.lower() ) ))
 
     try:
         if ( archive_resolved.parent !=
                 resolve(target['archive_domain_directory']) ):
-            raise exception.AlnitakError(
+            raise exception.AlnitakError( Error(1051,
                     "archive cert '{}' not in letsencrypt archive directory '{}'".format(
-                        target['archive_domain_directory'] ))
+                        target['archive_domain_directory'] ) ))
     except exception.AlnitakResolveError as ex:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(1052,
                 "archive domain directory '{}' could not be resolved: {}".format(
-                    ex.filename, ex.strerror.lower() ))
+                    ex.filename, ex.strerror.lower() ) ))
 
     # set it as follows so that we respect the path structure given
     # and not resolve any symlinks in the archive domain directory, if
