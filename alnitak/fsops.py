@@ -531,8 +531,9 @@ def set_prev_cert_data(state, domain, update=False):
     #   2. if cert_data matches new cert_data, we blank prev; otherwise, we
     #       write new cert data.
     for spec in state.targets[domain]['records']:
-        pem = certops.get_pem(state, domain, spec, use_renew = True)
-        cert_data = certops.get_cert_data(spec, pem)
+        params = state.targets[domain]['records'][spec]['params']
+        pem = certops.get_pem(state, domain, params['usage'])
+        cert_data = certops.get_cert_data(params, pem)
 
         # check if cert_data is in 'new':
         #if state.targets[domain]['records'][spec]['new']:
@@ -566,8 +567,9 @@ def set_new_cert_data(state, domain, update=False):
     #   2. if cert_data matches new cert_data, we blank prev; otherwise, we
     #       write new cert data.
     for spec in state.targets[domain]['records']:
-        pem = certops.get_pem(state, domain, spec)
-        cert_data = certops.get_cert_data(spec, pem)
+        params = state.targets[domain]['records'][spec]['params']
+        pem = certops.get_pem(state, domain, params['usage'], use_renew = True)
+        cert_data = certops.get_cert_data(params, pem)
 
         # check if data exists in prev and if so remove it
         if (state.targets[domain]['records'][spec]['prev'] and

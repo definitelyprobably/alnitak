@@ -10,11 +10,9 @@ from alnitak import exception
 # Note: python 3.5+ can use X.hex() instead of encode(X,'hex').decode('ascii').
 # If going to change that, then remove the 'codecs' import above.
 
-def get_pem(state, domain, spec, use_renew = False):
+def get_pem(state, domain, usage, use_renew = False):
     '''
 
-    target: ConfigTarget object
-    spec: key for the target.records dict; e.g. '311'
     '''
     target = state.targets[domain]
 
@@ -26,7 +24,7 @@ def get_pem(state, domain, spec, use_renew = False):
     # keys both have value '0'; however, for DANE-TA(2) we take the first
     # (only) PEM block in 'chain.pem' or else the second PEM block in
     # 'fullchain.pem', so these keys have value '0' and '1' respectively.
-    if spec[0] in ['1', '3']:
+    if str(usage) in ['1', '3']:
         if use_renew:
             candidate_certs = { target['certs']['cert.pem']['renew']: 0,
                                 target['certs']['fullchain.pem']['renew']: 0 }
@@ -95,14 +93,12 @@ def split_pem_data(data):
 
     return pems
 
-def get_cert_data(spec, pem):
+def get_cert_data(params, pem):
     '''
-
-    spec: key for the target.records dict; e.g. '311'
     '''
-    usage = spec[0]
-    selector = spec[1]
-    matching_type = spec[2]
+    usage = params['usage']
+    selector = params['selector']
+    matching_type = params['matching_type']
     try:
         cert = x509.load_pem_x509_certificate(
                                     bytes(pem, 'utf-8'), default_backend())

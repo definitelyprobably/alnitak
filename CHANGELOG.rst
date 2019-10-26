@@ -2,6 +2,21 @@
  Alnitak Changelog
 ===================
 
+0.3
+===
+
+* Major rewrite of the code.
+
+0.2.2
+=====
+
+* bugfixes.
+
+0.2.1
+=====
+
+* bugfixes.
+
 0.2
 ===
 

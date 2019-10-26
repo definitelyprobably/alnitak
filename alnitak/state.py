@@ -30,6 +30,14 @@ class State:
     def set_call_init(self):
         self.call = 'init'
 
+    # FIXME: write the rest of the call options
+    def set_call_prepare(self):
+        self.call = 'prepare'
+
+    # FIXME: write the rest of the call options
+    def set_call_deploy(self):
+        self.call = 'deploy'
+
     # TODO: use me!
     def set_progress_prepared(self, domain):
         self.targets[domain]['progress'] = 'prepared'
@@ -104,9 +112,12 @@ class State:
 
     def create_record(self, domain, usage, selector, matching_type, port,
                       protocol, record_domain=None):
-        if not record_domain:
-            record_domain = domain
-        spec = "{}{}{}".format(usage, selector, matching_type)
+        if record_domain:
+            rdomain = record_domain
+        else:
+            rdomain = domain
+        spec = "{}{}{}._{}._{}.{}".format(
+                    usage, selector, matching_type, port, protocol, rdomain)
         self.targets[domain]['records'][spec] = {
                 'params': {
                     'usage': usage,
@@ -115,7 +126,7 @@ class State:
                     },
                 'port': port,
                 'protocol': protocol,
-                'domain': record_domain,
+                'domain': rdomain,
                 'delete': {},
                 'prev': {
                     'data': None,
@@ -187,88 +198,6 @@ class State:
                 'key': None
                 }
 
-    # XXX
-    def debug_cut_paths(self, p):
-        if not p:
-            return p
-        if len(p.parents) > 4:
-            return "...{}".format( p.relative_to(list(p.parents)[4]) )
-        else:
-            return p
-
-    def debug_print(self):
-        print('~~~~~~ state ~~~~~~~~~~~~~~~~~~~~~')
-        print()
-        print('renewed domains: {}'.format(self.renewed_domains))
-        print('call: {}'.format(self.call))
-        print('log level: {}'.format(self.log_level))
-        print('testing mode: {}'.format(self.testing_mode))
-        for d in self.targets:
-            target = self.targets[d]
-            print()
-            print(d)
-            print('-'*len(d))
-            print('  dane directory:           {}'.format(self.debug_cut_paths(target['dane_directory'])))
-            print('      + sanitize: {}'.format(str(target['sanitize'])))
-            print('  dane domain directory:    {}'.format(self.debug_cut_paths(target['dane_domain_directory'])))
-            print('  letsencrypt directory:    {}'.format(self.debug_cut_paths(target['letsencrypt_directory'])))
-            print('  live directory:           {}'.format(self.debug_cut_paths(target['live_directory'])))
-            print('  live domain directory:    {}'.format(self.debug_cut_paths(target['live_domain_directory'])))
-            print('  archive directory:        {}'.format(self.debug_cut_paths(target['archive_directory'])))
-            print('  archive domain directory: {}'.format(self.debug_cut_paths(target['archive_domain_directory'])))
-            print('  live links: {}'.format(str(target['live_links'])))
-            print('  ttl: {}'.format(str(target['ttl'])))
-            print('  tainted: {}'.format(str(target['tainted'])))
-            print('  progress: {}'.format(str(target['progress'])))
-            print('  certs:')
-            for c in target['certs']:
-                print('    {}'.format(str(c)))
-                print('        + dane:    {}'.format(self.debug_cut_paths(target['certs'][c]['dane'])))
-                print('        + live:    {}'.format(self.debug_cut_paths(target['certs'][c]['live'])))
-                print('        + archive: {}'.format(self.debug_cut_paths(target['certs'][c]['archive'])))
-                print('        + renew:   {}'.format(self.debug_cut_paths(target['certs'][c]['renew'])))
-            for r in target['records']:
-                print('  records:')
-                print('      {}'.format(r))
-                print('        usage: {}  selector: {}  matching_type: {}'.format(str(target['records'][r]['params']['usage']), str(target['records'][r]['params']['selector']), str(target['records'][r]['params']['matching_type'])))
-                print('        port: {}  protocol: {}  domain: {}'.format(str(target['records'][r]['port']), str(target['records'][r]['protocol']), str(target['records'][r]['domain'])))
-                print('        delete:')
-                if target['records'][r]['delete']:
-                    for dr in target['records'][r]['delete']:
-                        delrec = target['records'][r]['delete'][dr]
-                        print('            {}'.format(dr))
-                        print('                data: {}...{}'.format(str(delrec['data'][:10]), str(delrec['data'][-10:])))
-                        print('        time: {}'.format(str(delrec['time'])))
-                else:
-                    print('            None')
-                print('        new:')
-                print('            data: {}...{}'.format(str(target['records'][r]['new']['data'][:10]), str(target['records'][r]['new']['data'][-10:])))
-                print('            published: {}'.format(str(target['records'][r]['new']['published'])))
-                print('            is_up: {}'.format(str(target['records'][r]['new']['is_up'])))
-                print('            update: {}'.format(str(target['records'][r]['new']['update'])))
-                print('            time: {}'.format(str(target['records'][r]['new']['time'])))
-                print('        prev:')
-                print('            data: {}...{}'.format(str(target['records'][r]['prev']['data'][:10]), str(target['records'][r]['prev']['data'][-10:])))
-                print('            time: {}'.format(str(target['records'][r]['prev']['time'])))
-                if target['api']['type'] == 'exec':
-                    print('  api:')
-                    print('      type: exec')
-                    print('      command'.format(str(target['api']['command'])))
-                    print('      uid: {}  gid: {}'.format(str(target['api']['uid']), str(target['api']['gid'])))
-                elif target['api']['type'] == 'cloudflare':
-                    print('  api:')
-                    print('      api: cloudflare')
-                    print('      version: {}'.format(str(target['api']['version'])))
-                    print('      zone: {}'.format(str(target['api']['zone'])))
-                    print('      email: {}'.format(str(target['api']['email'])))
-                    print('      key: {}'.format(str(target['api']['key'])))
-                else:
-                    print('  <unknown> {}'.format(target['api']))
-
-
-
-
-
     def tlsa_record_formatted(self, domain, spec, use_new = True):
         '''
         '''
@@ -337,14 +266,4 @@ class RetVal(Enum):
     exit_failure = 1
     continue_failure = 257
     config_failure = 3
-
-
-
-
-
-
-
-
-
-
 

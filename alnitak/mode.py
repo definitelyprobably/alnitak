@@ -6,10 +6,6 @@ def prepare(state, prev_state = None):
     '''
     '''
 
-    # The truly backend functions are:
-    # dane.init_dane_directory,
-    # dane.live_to_archive [NOT NEEDED],
-
     fsops.init_dane_directory(state)
 
     fsops.cleanup_prev_state(state, prev_state)
@@ -20,9 +16,6 @@ def prepare(state, prev_state = None):
 def deploy(state):
     '''
     '''
-
-    # dane.set_renewed_domains,
-    # dane.process_data,
 
     fsops.process_deletes(state)
 
