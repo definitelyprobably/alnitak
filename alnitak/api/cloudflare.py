@@ -5,6 +5,8 @@ import shlex # XXX used in config code at bottom
 from alnitak import exceptions as Except
 from alnitak import prog as Prog
 
+# FIXME: error messages and using Error class
+
 
 def get_errors(response):
     """Extract error messages from the JSON response.
@@ -183,7 +185,7 @@ def get_zone(state, domain):
 
 
 
-def api_delete(state, domain, spec, cleanup = None):
+def api_read_delete(state, domain, spec, cleanup = None):
     """Delete a DANE TLSA record.
 
     Args:
@@ -377,6 +379,7 @@ def cloudflare_native_publish(state, domain, spec):
                         'certificate': record['new']['data']
                         }
                     })
+        record['new']['published'] = True
         #prog.log.info2("  + publishing record: success")
     except CloudFlare.exceptions.CloudFlareAPIError as exc:
         if len(exc) > 0:
@@ -388,6 +391,8 @@ def cloudflare_native_publish(state, domain, spec):
         # 81057: record already exists
         # we don't need to do anything here
         elif int(exc) == 81057:
+            record['new']['published'] = True
+            record['new']['is_up'] = True
             return
         else:
             raise exception.AlnitakError(
@@ -454,6 +459,8 @@ def cloudflare_fallback_publish(state, domain, spec):
     if len(errors) == 1 and errors[0][0] == 81057:
         # we will only accept this code if it is the only error
         # encountered
+        record['new']['published'] = True
+        record['new']['is_up'] = True
         return
 
     if errors:
@@ -465,6 +472,10 @@ def cloudflare_fallback_publish(state, domain, spec):
 
     if not response['success']:
         raise exception.AlnitakError("Cloudflare4 JSON response failure")
+
+    # if we hit this point, then there were no errors and the record was
+    # published:
+    record['new']['published'] = True
 
 
 

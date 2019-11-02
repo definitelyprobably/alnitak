@@ -65,6 +65,9 @@ def init_dane_directory(state):
             # set progress:
             target['progress'] = 'prepared'
 
+            # set prepared:
+            target['prepared'] = True
+
         except exception.AlnitakError as ex:
             target['tainted'] = True
             if state.handler:
@@ -336,7 +339,7 @@ def cleanup_prev_state(state, prev_state):
             for spec in prev_state.targets[domain]['records']:
                 prev_record = prev_state.targets[domain]['records'][spec]
                 if prev_record['new']['published']:
-                    state.create_delete(domain, spec, prev=prev_state)
+                    state.create_delete(domain, spec, prev_state=prev_state)
 
                 for delete in prev_record['delete']:
                     state.targets[domain]['records'][spec]['delete'][
@@ -420,11 +423,18 @@ def set_renewed(state):
                 # different, we will take the whole domain to have been
                 # renewed.
                 if curr_archive != resolve(target['certs'][cert]['archive']):
-                    target['certs'][cert]['renew'] = (
-                        target['archive_domain_directory'] / curr_archive.name )
-                    if not added_to_renewed:
-                        state.renewed_domains += [ d ]
-                        added_to_renewed = True
+                    # if the current archive cert is already set in 'renew',
+                    # then renewal occurred before and has not been renewed
+                    # again; we do not need to set renewed_domains
+                    if str(target['certs'][cert]['renew']) != str(
+                                        target['archive_domain_directory']
+                                                        / curr_archive.name):
+                        target['certs'][cert]['renew'] = (
+                                    target['archive_domain_directory']
+                                                        / curr_archive.name )
+                        if not added_to_renewed:
+                            state.renewed_domains += [ d ]
+                            added_to_renewed = True
 
             except exception.AlnitakResolveError as ex:
                 raise exception.AlnitakError( Error(1043,
@@ -437,23 +447,7 @@ def process_deployed(state):
     '''
     '''
 
-    # if there is a duplicate domain, we will only process the first one
-    # and ignore the others. We need to remember which domains have been
-    # processed:
-    processed_domains = []
-
     for d in state.targets:
-
-        if d in processed_domains:
-            if state.handler:
-                state.handler.warning("domain '{}' already processed; will ignore this config entry".format(d)) # FIXME
-                # FIXME: some info about this config entry!? The statefile
-                # could be deleted; so this info will be permanently lost:
-                # surely this is not acceptable?
-                continue
-
-        processed_domains += [ d ]
-
         target = state.targets[d]
 
         if target['tainted']:
@@ -462,11 +456,16 @@ def process_deployed(state):
 
         try:
             if target['progress'] == 'unprepared':
+                # <renew>
+                # alnitak deploy
                 if d in state.renewed_domains:
                     set_new_cert_data(state, d)
                     # don't bother creating prev cert data
                     publish_records(state, d)
-                    target['progress'] = 'deployed'
+                    move_symlinks(state, d)
+
+                #
+                # alnitak deploy
                 else:
                     # here, nothing is needed. Likely we got here by the
                     # domain not being renewed on the first deploy mode call,
@@ -477,24 +476,38 @@ def process_deployed(state):
                     pass
 
             elif target['progress'] == 'prepared':
+                # alnitak prepare
+                # <renew>
+                # alnitak deploy
                 if d in state.renewed_domains:
                     set_cert_data(state, d)
                     publish_records(state, d)
-                    target['progress'] = 'deployed'
+                    move_symlinks(state, d)
+
+                # alnitak prepare
+                # alnitak deploy
                 else:
                     populate_dane_domain_directory(
                                 state, d, to_live=True, skip_certs=True)
                     target['progress'] = 'unprepared'
 
             elif target['progress'] == 'deployed':
+                # [alnitak prepare]  (possibly run)
+                # <renew>
+                # alnitak deploy
+                # alnitak deploy
                 if d in state.renewed_domains:
                     set_cert_data(state, d, update=True)
                     publish_records(state, d)
+                    move_symlinks(state, d)
+
+                # [alnitak prepare]  (possibly run)
+                # alnitak deploy
+                # alnitak deploy
                 else:
                     publish_records(state, d)
                     delete_records(state, d)
-                    if move_symlinks(state, d):
-                        target['progress'] = 'unprepared'
+                    move_symlinks(state, d)
 
             else:
                 if state.handler:
@@ -503,7 +516,8 @@ def process_deployed(state):
                                 target['progress'] ))
 
         except exception.AlnitakError as ex:
-            target['tainted'] = True
+            # FIXME: should I taint?
+            #target['tainted'] = True
             if state.handler:
                 state.handler.error(ex.message)
 
@@ -628,7 +642,6 @@ def publish_records(state, domain):
 
         try:
             api_publish(state, domain, spec)
-            target['records'][spec]['new']['published'] = True
 
         except exception.AlnitakError as ex:
             # Note: don't set tainted since publish errors, even something
@@ -644,9 +657,9 @@ def delete_records(state, domain):
     target = state.targets[domain]
 
     if target['api']['type'] == 'cloudflare':
-        from alnitak.api.cloudflare import api_delete
+        from alnitak.api.cloudflare import api_read_delete
     else:
-        from alnitak.api.exec import api_delete
+        from alnitak.api.exec import api_read_delete
 
     for spec in target['records']:
         # if record not published, don't delete
@@ -659,8 +672,14 @@ def delete_records(state, domain):
                 int(target['records'][spec]['new']['time']) ):
             continue
 
+        # if record already processed, then is_up will be set to true;
+        # don't do anything here. If delete failed before, then it will
+        # have been moved to delete, and 'process_deletes' will handle it
+        if target['records'][spec]['new']['is_up']:
+            continue
+
         try:
-            api_delete(state, domain, spec)
+            api_read_delete(state, domain, spec)
         except exception.AlnitakError as ex:
             # delete failed, so move data from prev to delete
             state.create_delete(domain, spec)
@@ -683,10 +702,12 @@ def move_symlinks(state, domain):
         if not target['records'][spec]['new']['is_up']:
             break
     else:
-        populate_dane_domain_directory(
-                state, domain, to_live=True, skip_certs=True)
-        return True
-    return False
+        if target['prepared']:
+            populate_dane_domain_directory(
+                        state, domain, to_live=True, skip_certs=True)
+        target['progress'] = 'unprepared'
+        return
+    target['progress'] = 'deployed'
 
 
 # TODO: docs
@@ -697,16 +718,16 @@ def process_deletes(state):
         target = state.targets[domain]
 
         if target['api']['type'] == 'cloudflare':
-            from alnitak.api.cloudflare import api_delete
+            from alnitak.api.cloudflare import api_read_delete
         else:
-            from alnitak.api.exec import api_delete
+            from alnitak.api.exec import api_read_delete
 
         for spec in target['records']:
             record = target['records'][spec]
 
             for data in record['delete']:
                 try:
-                    api_delete(state, domain, spec, data)
+                    api_read_delete(state, domain, spec, data)
                 except exception.AlnitakError as ex:
                     # Note: don't set tainted since delete errors, should
                     # not stop future calls from processing the record.

@@ -10,6 +10,8 @@ from alnitak import exception
 # Note: python 3.5+ can use X.hex() instead of encode(X,'hex').decode('ascii').
 # If going to change that, then remove the 'codecs' import above.
 
+# FIXME: errors: use Error class
+
 def get_pem(state, domain, usage, use_renew = False):
     '''
 

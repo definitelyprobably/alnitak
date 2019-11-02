@@ -61,6 +61,9 @@ class State:
     def set_sanitize(self, domain):
         self.targets[domain]['sanitize'] = True
 
+    def set_ttl(self, domain, ttl):
+        self.targets[domain]['ttl'] = ttl
+
     def create_target(self, domain):
         if domain in self.targets:
             return False # FIXME return or raise?
@@ -68,18 +71,19 @@ class State:
                 'records': {},
                 'api': {},
                     # {
-                    #   'exec': {
-                    #       'command': [ 'bin', '--flag0', '--flag1' ],
-                    #       'uid': 0,
-                    #       'gid': 0,
-                    #       },
-                    #   'cloudflare': {
-                    #       'version': 4,
-                    #       'object': None, # store the cloudflare API object
-                    #       'zone': None,
-                    #       'email': None,
-                    #       'key': None,
-                    #       }
+                    #   'type': 'exec'
+                    #   'command': [ 'bin', '--flag0', '--flag1' ],
+                    #   'uid': 0,
+                    #   'gid': 0,
+                    # }
+                    #   OR
+                    # {
+                    #   'type': 'cloudflare'
+                    #   'version': 4,
+                    #   'object': None, # store the cloudflare API object
+                    #   'zone': None,
+                    #   'email': None,
+                    #   'key': None,
                     # }
                 'dane_directory': Path('/etc/alnitak/dane'),
                 'dane_domain_directory': None,
@@ -101,6 +105,11 @@ class State:
                     # not be further processed. This should also be
                     # read to see how the frontend should exit.
                 'progress': 'unprepared',
+                'prepared': False,
+                    # if we run prepare, then set this to True. If we run
+                    # deploy without preparation, then we won't have moved
+                    # the live symlinks to archive certs, so when moving
+                    # the symlinks back, we have nothing to do.
                 'sanitize': False,
                     # enforce DD permissions to be correct.
                 'certs': {}
@@ -141,9 +150,10 @@ class State:
                     }
                 }
 
-    def create_delete(self, domain, spec, use_new = False, prev = None):
-        if prev:
-            data = prev.targets[domain]['records'][spec]['new']['data']
+    # FIXME: is use_new ever used?
+    def create_delete(self, domain, spec, use_new = False, prev_state = None):
+        if prev_state:
+            data = prev_state.targets[domain]['records'][spec]['new']['data']
             self.targets[domain]['records'][spec]['delete'][data] = {
                     'data': data,
                     'time': int('{:%s}'.format(datetime.utcnow()))
@@ -156,10 +166,13 @@ class State:
                         'time': int( '{:%s}'.format(datetime.utcnow()) )
                         }
             else:
-                record['delete'][record['prev']['data']] = {
-                        'data': record['prev']['data'],
-                        'time': int( '{:%s}'.format(datetime.utcnow()) )
-                        }
+                # only move prev record if it exists. It won't exist for, e.g.
+                # 2xx records.
+                if record['prev']['data']:
+                    record['delete'][record['prev']['data']] = {
+                            'data': record['prev']['data'],
+                            'time': int( '{:%s}'.format(datetime.utcnow()) )
+                            }
 
     def set_prev_record(self, domain, spec, data):
         self.targets[domain]['records'][spec]['prev'] = {

@@ -5,6 +5,7 @@ import grp
 import subprocess
 
 from alnitak import exception
+from alnitak.prog import Error
 
 
 def formalize_string(inp, prepend=""):
@@ -56,7 +57,8 @@ def get_gid(api):
         except KeyError:
             pass
 
-        raise exception.AlnitakError("getting GID value failed: no GID value for user '{}' found".found(uid))
+        raise exception.AlnitakError( Error(3100,
+                    "getting GID value failed: no GID value for user '{}' found".format(uid) ))
 
     try:
         return int(gid)
@@ -74,7 +76,8 @@ def get_gid(api):
     except KeyError:
         pass
 
-    raise exception.AlnitakError("getting GID value failed: no group or user GID value for '{}' found".found(gid))
+    raise exception.AlnitakError( Error(3101,
+        "getting GID value failed: no group or user GID value for '{}' found".format(gid) ))
 
 
 def drop_privs(api):
@@ -100,23 +103,23 @@ def drop_privs(api):
     try:
         os.umask(0o027)
     except OSError as ex:
-        raise exception.AlnitakError(
-                "setting umask failed: {}".format(ex.strerror.lower()))
+        raise exception.AlnitakError( Error(3110,
+                "setting umask failed: {}".format(ex.strerror.lower()) ))
 
     try:
         os.setgroups( os.getgrouplist(pwd.getpwuid(uid).pw_name, gid) )
     except KeyError:
-        raise exception.AlnitakError("dropping privileges failed: could not set new group permissions")
+        raise exception.AlnitakError( Error(3111, "dropping privileges failed: could not set new group permissions") )
 
     try:
         os.setgid(gid)
     except OSError as ex:
-        raise exception.AlnitakError("droping GID privileges to group '{}' failed: {}".format(gid, ex.strerror.lower()))
+        raise exception.AlnitakError( Error(3112, "droping GID privileges to group '{}' failed: {}".format(gid, ex.strerror.lower()) ))
 
     try:
         os.setuid(uid)
     except OSError as ex:
-        raise exception.AlnitakError("droping UID privileges to user '{}' failed: {}".format(uid, ex.strerror.lower()))
+        raise exception.AlnitakError( Error(3113, "droping UID privileges to user '{}' failed: {}".format(uid, ex.strerror.lower()) ))
 
 
 def drop_privs_lambda(api, testing):
@@ -172,22 +175,23 @@ def api_publish(state, domain, spec):
         # 3.6.7: strerror: "No such file or directory: 'file'"
         #        filename: "file"
         # Neither of these are correct...
-        raise exception.AlnitakError(
-                "command '{}': file not found".format(api['command'][0]))
+        raise exception.AlnitakError( Error(3120,
+                "command '{}': file not found".format(api['command'][0]) ))
     except OSError as ex:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(3121,
                 "command '{}': {}".format(
-                    api['command'][0], ex.strerror.lower()))
+                    api['command'][0], ex.strerror.lower()) ))
     except subprocess.SubprocessError as ex:
-        raise exception.AlnitakError("command '{}' failed: {}".format(
-            api['command'][0], str(ex).lower()))
+        raise exception.AlnitakError( Error(3122,
+                "command '{}' failed: {}".format(
+                    api['command'][0], str(ex).lower()) ))
 
     try:
         stdout, stderr = proc.communicate(timeout=300)
     except subprocess.TimeoutExpired:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(3123,
                 "command '{}': process timed out (300s)".format(
-                    api['command'][0]))
+                    api['command'][0]) ))
 
     # TODO
     #prog.log.info3(
@@ -205,26 +209,20 @@ def api_publish(state, domain, spec):
 
     # record was published
     if proc.returncode == 0:
+        record['new']['published'] = True
         return
 
     # record was already up
     if proc.returncode == 1:
+        record['new']['published'] = True
+        record['new']['is_up'] = True
         return
 
-    errmsg = "publishing TLSA record: external program '{}' returned exit code {}".format(api['command'][0], proc.returncode)
-
-    # XXX: forget the skip semantics
-    #if proc.returncode >= 128: # FIXME
-    #    raise exception.AlnitakSkipError(errmsg)
-    raise exception.AlnitakError(errmsg)
+    raise exception.AlnitakError( Error(3124,
+            "publishing TLSA record: external program '{}' returned exit code {}".format(api['command'][0], proc.returncode) ))
 
 
-# [1]: new (published), prev (action: delete)
-#       - must check new record is up before delete attempted.
-#       - if this fails, the prev record is moved to delete.
-# [2]: delete (action: delete)
-#       - delete [1] failed, should now do an unconditional delete.
-def api_delete(state, domain, spec, cleanup = None):
+def api_read_delete(state, domain, spec, cleanup = None):
     """Delete a DANE TLSA record.
 
     Args:
@@ -284,16 +282,20 @@ def api_delete(state, domain, spec, cleanup = None):
                 "ALNITAK_PORT": str(record['port']),
                 "ALNITAK_PROTOCOL": str(record['protocol']),
                 "ALNITAK_DOMAIN": str(record['domain']),
-                "ALNITAK_CERT_DATA": cert_data,
                 "ALNITAK_OPERATION": "delete" }
 
+    # only set this if there is a record to delete. Potentially, there may not
+    # be if the new record matches the prev one (e.g. for 2xx records).
+    if cert_data:
+        environ["ALNITAK_CERT_DATA"] = cert_data
 
     if not cleanup:
         environ["ALNITAK_LIVE_CERT_DATA"] = cert_data_live
 
     try:
         proc = subprocess.Popen(api['command'], env=environ,
-                                preexec_fn=drop_privs_lambda(api),
+                                preexec_fn=drop_privs_lambda(
+                                                    api, state.testing_mode),
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except FileNotFoundError as ex:
         # exception does not seem to be set properly.
@@ -302,23 +304,23 @@ def api_delete(state, domain, spec, cleanup = None):
         # 3.6.7: strerror: "No such file or directory: 'file'"
         #        filename: "file"
         # Neither of these are correct...
-        raise exception.AlnitakError(
-                "command '{}': file not found".format(api['command'][0]))
+        raise exception.AlnitakError( Error(3130,
+                "command '{}': file not found".format(api['command'][0]) ))
     except OSError as ex:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(3131,
                 "command '{}': {}".format(
-                    api['command'][0], ex.strerror.lower()))
+                    api['command'][0], ex.strerror.lower()) ))
     except subprocess.SubprocessError as ex:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(3132,
                 "command '{}' failed: {}".format(
-                    api['command'][0], str(ex).lower()))
+                    api['command'][0], str(ex).lower()) ))
 
     try:
         stdout, stderr = proc.communicate(timeout=300)
     except subprocess.TimeoutExpired:
-        raise exception.AlnitakError(
+        raise exception.AlnitakError( Error(3133,
                 "command '{}': process timed out (300s)".format(
-                    api['command'][0]))
+                    api['command'][0]) ))
 
     # TODO
     #prog.log.info3(
@@ -355,12 +357,17 @@ def api_delete(state, domain, spec, cleanup = None):
             record['new']['is_up'] = True
 
 
-    errmsg = "deleting TLSA record: external program '{}' returned exit code {}".format(api['command'][0], proc.returncode)
-
-    # XXX: forget the skip semantics
-    #if proc.returncode >= 128: # FIXME
-    #    raise exception.AlnitakSkipError(errmsg)
-    raise exception.AlnitakError(errmsg)
+    # FIXME: capture stderr from command and report it here.
+    raise exception.AlnitakError( Error(3134,
+            "deleting TLSA record '{} {} {}' (_{}._{}.{}): external program '{}' returned exit code {}".format(
+                record['params']['usage'],
+                record['params']['selector'],
+                record['params']['matching_type'],
+                record['port'],
+                record['protocol'],
+                record['domain'],
+                api['command'][0],
+                proc.returncode) ))
 
 
 

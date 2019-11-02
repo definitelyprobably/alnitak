@@ -372,8 +372,8 @@ def check_state_certs(state, domain, certs):
     assert state.targets[domain]['certs'] == certs
 
 def check_record(state, domain, spec, port, protocol, rdomain=None,
-                 data=None, prev_data=None, published=False, is_up=False,
-                 update=None):
+                 data=None, prev_data=None, delete_data=None, published=False,
+                 is_up=False, update=None):
     key = '{}._{}._{}.{}'.format(spec, port, protocol, rdomain)
     record = state.targets[domain]['records'][key]
     assert port == record['port']
@@ -393,6 +393,18 @@ def check_record(state, domain, spec, port, protocol, rdomain=None,
 
     assert record['prev']['data'] == prev_data
 
+    if delete_data:
+        if record['delete']:
+            if record['delete'][delete_data]:
+                assert record['delete'][delete_data]['data'] == delete_data
+            else:
+                assert False
+        else:
+            assert False
+    else:
+        if record['delete']:
+            assert False
+
     if data and prev_data:
         assert data != prev_data
 
@@ -408,20 +420,38 @@ def create_exec(base='.alnitak_tests', bin_dir='bin', bin_name='api'):
     # api N  - exit with code N
     with open(str(api_prog), 'w') as f:
         f.write(r'''#!/bin/sh
-echo "$(whoami) 1:$1 $(env | xargs)" >> $(dirname "$0")/call.data
-if expr match "$1" '^[0-9]\+$' >/dev/null 2>&1; then
-    exit "$1"
-else
+exit_code=0
+for i in $@ ; do
+    case $i in
+        "$ALNITAK_OPERATION:$ALNITAK_ZONE:$ALNITAK_USAGE$ALNITAK_SELECTOR$ALNITAK_MATCHING_TYPE:$ALNITAK_PORT:$ALNITAK_PROTOCOL:$ALNITAK_DOMAIN"::*)
+            exit_code=$(echo "$i" | sed 's/.\+:://')
+            ;;
+        "$ALNITAK_OPERATION"::*)
+            exit_code=$(echo "$i" | sed 's/.\+:://')
+            ;;
+        "$ALNITAK_USAGE$ALNITAK_SELECTOR$ALNITAK_MATCHING_TYPE"::*)
+            exit_code=$(echo "$i" | sed 's/.\+:://')
+            ;;
+    esac
+done
+
+echo "$(whoami) x:$exit_code $(env | xargs) " >> $(dirname "$0")/call.data
+if test -z "$exit_code" ; then
     exit 0
 fi
+exit "$exit_code"
 ''')
 
     os.chmod(str(api_prog), 0o744)
 
-    try:
-        call_data.unlink()
-    except FileNotFoundError:
-        pass
+    return reset_call_data(base=base, bin_dir=bin_dir)
+
+def reset_call_data(base='.alnitak_tests', bin_dir='bin'):
+    call_data = Path(base) / bin_dir / 'call.data'
+    with open(str(call_data), 'w') as f:
+        f.write('')
+
+    return call_data
 
 
 def read_call_data(base='.alnitak_tests', bin_dir='bin'):
@@ -436,10 +466,23 @@ def read_call_data(base='.alnitak_tests', bin_dir='bin'):
 def is_in_call_data(call_data, data):
     count = 0
     for l in call_data:
-        if data in l:
-            count += 1
+        if type(data) is list:
+            for d in data:
+                if (d + ' ') not in l:
+                    break
+            else:
+                count += 1
+        else:
+            if (data + ' ') in l:
+                count += 1
     return count
 
+def str_in_list(msg, obj):
+    for l in obj:
+        if msg in str(l):
+            break
+    else:
+        assert False
 
 def simulate_renew(base='.alnitak_tests', le_dir='etc/le',
                    domains=['a.com', 'b.com', 'c.com'], to=None):
@@ -604,15 +647,17 @@ def get_data(domain, num, spec):
     return 'nodata'
 
 
-def debug_cut_paths(p):
+def debug_cut_paths(p, cut):
     if not p:
+        return p
+    if not cut:
         return p
     if len(p.parents) > 4:
         return "...{}".format( p.relative_to(list(p.parents)[4]) )
     else:
         return p
 
-def debug_print(state):
+def debug_print(state, pcut=False, dcut=False):
     print('~~~~~~ state ~~~~~~~~~~~~~~~~~~~~~')
     print()
     print('renewed domains: {}'.format(state.renewed_domains))
@@ -624,14 +669,14 @@ def debug_print(state):
         print()
         print(d)
         print('-'*len(d))
-        print('  dane directory:           {}'.format(debug_cut_paths(target['dane_directory'])))
+        print('  dane directory:           {}'.format(debug_cut_paths(target['dane_directory'], pcut)))
         print('      + sanitize: {}'.format(str(target['sanitize'])))
-        print('  dane domain directory:    {}'.format(debug_cut_paths(target['dane_domain_directory'])))
-        print('  letsencrypt directory:    {}'.format(debug_cut_paths(target['letsencrypt_directory'])))
-        print('  live directory:           {}'.format(debug_cut_paths(target['live_directory'])))
-        print('  live domain directory:    {}'.format(debug_cut_paths(target['live_domain_directory'])))
-        print('  archive directory:        {}'.format(debug_cut_paths(target['archive_directory'])))
-        print('  archive domain directory: {}'.format(debug_cut_paths(target['archive_domain_directory'])))
+        print('  dane domain directory:    {}'.format(debug_cut_paths(target['dane_domain_directory'], pcut)))
+        print('  letsencrypt directory:    {}'.format(debug_cut_paths(target['letsencrypt_directory'], pcut)))
+        print('  live directory:           {}'.format(debug_cut_paths(target['live_directory'], pcut)))
+        print('  live domain directory:    {}'.format(debug_cut_paths(target['live_domain_directory'], pcut)))
+        print('  archive directory:        {}'.format(debug_cut_paths(target['archive_directory'], pcut)))
+        print('  archive domain directory: {}'.format(debug_cut_paths(target['archive_domain_directory'], pcut)))
         print('  live links: {}'.format(str(target['live_links'])))
         print('  ttl: {}'.format(str(target['ttl'])))
         print('  tainted: {}'.format(str(target['tainted'])))
@@ -639,43 +684,54 @@ def debug_print(state):
         print('  certs:')
         for c in target['certs']:
             print('    {}'.format(str(c)))
-            print('        + dane:    {}'.format(debug_cut_paths(target['certs'][c]['dane'])))
-            print('        + live:    {}'.format(debug_cut_paths(target['certs'][c]['live'])))
-            print('        + archive: {}'.format(debug_cut_paths(target['certs'][c]['archive'])))
-            print('        + renew:   {}'.format(debug_cut_paths(target['certs'][c]['renew'])))
+            print('        + dane:    {}'.format(debug_cut_paths(target['certs'][c]['dane'], pcut)))
+            print('        + live:    {}'.format(debug_cut_paths(target['certs'][c]['live'], pcut)))
+            print('        + archive: {}'.format(debug_cut_paths(target['certs'][c]['archive'], pcut)))
+            print('        + renew:   {}'.format(debug_cut_paths(target['certs'][c]['renew'], pcut)))
         for r in target['records']:
             print('  records:')
-            print('      {}'.format(r))
-            print('        usage: {}  selector: {}  matching_type: {}'.format(str(target['records'][r]['params']['usage']), str(target['records'][r]['params']['selector']), str(target['records'][r]['params']['matching_type'])))
-            print('        port: {}  protocol: {}  domain: {}'.format(str(target['records'][r]['port']), str(target['records'][r]['protocol']), str(target['records'][r]['domain'])))
-            print('        delete:')
+            print('    {}'.format(r))
+            print('      usage: {}  selector: {}  matching_type: {}'.format(str(target['records'][r]['params']['usage']), str(target['records'][r]['params']['selector']), str(target['records'][r]['params']['matching_type'])))
+            print('      port: {}  protocol: {}  domain: {}'.format(str(target['records'][r]['port']), str(target['records'][r]['protocol']), str(target['records'][r]['domain'])))
+            print('      delete:')
             if target['records'][r]['delete']:
                 for dr in target['records'][r]['delete']:
                     delrec = target['records'][r]['delete'][dr]
-                    print('            {}'.format(dr))
-                    print('                data: {}...{}'.format(str(delrec['data'][:10]), str(delrec['data'][-10:])))
-                    print('        time: {}'.format(str(delrec['time'])))
+                    if delrec['data']:
+                        if dcut:
+                            print('          data: {}...{}'.format(str(delrec['data'][:10]), str(delrec['data'][-10:])))
+                        else:
+                            print('          data: {}'.format(delrec['data']))
+                    else:
+                        print('          data: {}'.format(delrec['data']))
+                    print('          time: {}'.format(str(delrec['time'])))
             else:
-                print('            None')
-            print('        new:')
+                print('          None')
+            print('      new:')
             if target['records'][r]['new']['data']:
-                print('            data: {}'.format(str(target['records'][r]['new']['data'][:10]), str(target['records'][r]['new']['data'][-10:])))
+                if dcut:
+                    print('          data: {}...{}'.format(str(target['records'][r]['new']['data'][:10]), str(target['records'][r]['new']['data'][-10:])))
+                else:
+                    print('          data: {}'.format(target['records'][r]['new']['data']))
             else:
-                print('            data: {}'.format(target['records'][r]['new']['data']))
-            print('            published: {}'.format(str(target['records'][r]['new']['published'])))
-            print('            is_up: {}'.format(str(target['records'][r]['new']['is_up'])))
-            print('            update: {}'.format(str(target['records'][r]['new']['update'])))
-            print('            time: {}'.format(str(target['records'][r]['new']['time'])))
-            print('        prev:')
+                print('          data: {}'.format(target['records'][r]['new']['data']))
+            print('          published: {}'.format(str(target['records'][r]['new']['published'])))
+            print('          is_up: {}'.format(str(target['records'][r]['new']['is_up'])))
+            print('          update: {}'.format(str(target['records'][r]['new']['update'])))
+            print('          time: {}'.format(str(target['records'][r]['new']['time'])))
+            print('      prev:')
             if target['records'][r]['prev']['data']:
-                print('            data: {}'.format(str(target['records'][r]['prev']['data'][:10]), str(target['records'][r]['prev']['data'][-10:])))
+                if dcut:
+                    print('          data: {}...{}'.format(str(target['records'][r]['prev']['data'][:10]), str(target['records'][r]['prev']['data'][-10:])))
+                else:
+                    print('          data: {}'.format(target['records'][r]['prev']['data']))
             else:
-                print('            data: {}'.format(target['records'][r]['prev']['data']))
-            print('            time: {}'.format(str(target['records'][r]['prev']['time'])))
+                print('          data: {}'.format(target['records'][r]['prev']['data']))
+            print('          time: {}'.format(str(target['records'][r]['prev']['time'])))
             if target['api']['type'] == 'exec':
                 print('        api:')
                 print('            type: exec')
-                print('            command'.format(str(target['api']['command'])))
+                print('            command: {}'.format(str(target['api']['command'])))
                 print('            uid: {}  gid: {}'.format(str(target['api']['uid']), str(target['api']['gid'])))
             elif target['api']['type'] == 'cloudflare':
                 print('        api:')
@@ -687,3 +743,5 @@ def debug_print(state):
             else:
                 print('        <unknown> {}'.format(target['api']))
 
+def set_update_api(state, domain, command):
+    state.targets[domain]['api']['command'] = command
