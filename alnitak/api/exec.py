@@ -7,7 +7,6 @@ import subprocess
 from alnitak import exception
 from alnitak.prog import Error
 
-
 def formalize_string(inp, prepend=""):
     r"""Transform a byte string to a standard form.
 
@@ -24,7 +23,6 @@ def formalize_string(inp, prepend=""):
     """
     return "\n".join( [ "{}{}".format(prepend,i)
                                         for i in inp.decode().splitlines() ] )
-
 
 def get_gid(api):
     """Return a GID value.
@@ -79,7 +77,6 @@ def get_gid(api):
     raise exception.AlnitakError( Error(3101,
         "getting GID value failed: no group or user GID value for '{}' found".format(gid) ))
 
-
 def drop_privs(api):
     """Drop privileges of the running process.
 
@@ -104,7 +101,7 @@ def drop_privs(api):
         os.umask(0o027)
     except OSError as ex:
         raise exception.AlnitakError( Error(3110,
-                "setting umask failed: {}".format(ex.strerror.lower()) ))
+                "setting umask failed: {}".format(ex.strerror) ))
 
     try:
         os.setgroups( os.getgrouplist(pwd.getpwuid(uid).pw_name, gid) )
@@ -114,20 +111,18 @@ def drop_privs(api):
     try:
         os.setgid(gid)
     except OSError as ex:
-        raise exception.AlnitakError( Error(3112, "droping GID privileges to group '{}' failed: {}".format(gid, ex.strerror.lower()) ))
+        raise exception.AlnitakError( Error(3112, "droping GID privileges to group '{}' failed: {}".format(gid, ex.strerror) ))
 
     try:
         os.setuid(uid)
     except OSError as ex:
-        raise exception.AlnitakError( Error(3113, "droping UID privileges to user '{}' failed: {}".format(uid, ex.strerror.lower()) ))
-
+        raise exception.AlnitakError( Error(3113, "droping UID privileges to user '{}' failed: {}".format(uid, ex.strerror) ))
 
 def drop_privs_lambda(api, testing):
     """Return a lambda function of the drop_privs(api) function."""
     if testing:
         return
     return lambda : drop_privs(api)
-
 
 def api_publish(state, domain, spec):
     """Create (publish) a DANE TLSA record.
@@ -180,11 +175,11 @@ def api_publish(state, domain, spec):
     except OSError as ex:
         raise exception.AlnitakError( Error(3121,
                 "command '{}': {}".format(
-                    api['command'][0], ex.strerror.lower()) ))
+                    api['command'][0], ex.strerror) ))
     except subprocess.SubprocessError as ex:
         raise exception.AlnitakError( Error(3122,
                 "command '{}' failed: {}".format(
-                    api['command'][0], str(ex).lower()) ))
+                    api['command'][0], str(ex)) ))
 
     try:
         stdout, stderr = proc.communicate(timeout=300)
@@ -220,7 +215,6 @@ def api_publish(state, domain, spec):
 
     raise exception.AlnitakError( Error(3124,
             "publishing TLSA record: external program '{}' returned exit code {}".format(api['command'][0], proc.returncode) ))
-
 
 def api_read_delete(state, domain, spec, cleanup = None):
     """Delete a DANE TLSA record.
@@ -287,7 +281,7 @@ def api_read_delete(state, domain, spec, cleanup = None):
     # only set this if there is a record to delete. Potentially, there may not
     # be if the new record matches the prev one (e.g. for 2xx records).
     if cert_data:
-        environ["ALNITAK_CERT_DATA"] = cert_data
+        environ["ALNITAK_DELETE_CERT_DATA"] = cert_data
 
     if not cleanup:
         environ["ALNITAK_LIVE_CERT_DATA"] = cert_data_live
@@ -309,11 +303,11 @@ def api_read_delete(state, domain, spec, cleanup = None):
     except OSError as ex:
         raise exception.AlnitakError( Error(3131,
                 "command '{}': {}".format(
-                    api['command'][0], ex.strerror.lower()) ))
+                    api['command'][0], ex.strerror) ))
     except subprocess.SubprocessError as ex:
         raise exception.AlnitakError( Error(3132,
                 "command '{}' failed: {}".format(
-                    api['command'][0], str(ex).lower()) ))
+                    api['command'][0], str(ex)) ))
 
     try:
         stdout, stderr = proc.communicate(timeout=300)
@@ -356,19 +350,20 @@ def api_read_delete(state, domain, spec, cleanup = None):
         if proc.returncode == 2:
             record['new']['is_up'] = True
 
+            # if cert_data is unset, then we should not have attempted a
+            # deletion, this is probably a mistake on the external binary's
+            # part. We will skip the code that raises an exception by
+            # returning now.
+            if not cert_data:
+                return
+
 
     # FIXME: capture stderr from command and report it here.
     raise exception.AlnitakError( Error(3134,
-            "deleting TLSA record '{} {} {}' (_{}._{}.{}): external program '{}' returned exit code {}".format(
-                record['params']['usage'],
-                record['params']['selector'],
-                record['params']['matching_type'],
-                record['port'],
-                record['protocol'],
-                record['domain'],
+            "deleting TLSA record {}: external program '{}' returned exit code {}".format(
+                state.tlsa_record_formatted(domain, spec),
                 api['command'][0],
                 proc.returncode) ))
-
 
 
 

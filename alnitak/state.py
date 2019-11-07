@@ -1,7 +1,7 @@
 
-import sys
+import sys # XXX
 from pathlib import Path
-from datetime import datetime # XXX
+from datetime import datetime
 from enum import Enum # XXX
 
 
@@ -139,14 +139,14 @@ class State:
                 'delete': {},
                 'prev': {
                     'data': None,
-                    'time': 0
+                    'time': None
                     },
                 'new': {
                     'data': None,
                     'published': False,
                     'is_up': False,
                     'update': None,
-                    'time': 0
+                    'time': None
                     }
                 }
 
@@ -211,10 +211,18 @@ class State:
                 'key': None
                 }
 
-    def tlsa_record_formatted(self, domain, spec, use_new = True):
+    def tlsa_record_formatted(self, domain, spec, use_new = None):
         '''
         '''
         record = self.targets[domain]['records'][spec]
+        if use_new is None:
+            return "'{} {} {}' (_{}._{}.{})".format(
+                    record['params']['usage'],
+                    record['params']['selector'],
+                    record['params']['matching_type'],
+                    record['port'],
+                    record['protocol'],
+                    record['domain'])
         if use_new:
             data = record['new']['data']
         else:

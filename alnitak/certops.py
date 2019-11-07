@@ -10,13 +10,12 @@ from alnitak import exception
 # Note: python 3.5+ can use X.hex() instead of encode(X,'hex').decode('ascii').
 # If going to change that, then remove the 'codecs' import above.
 
-# FIXME: errors: use Error class
-
-def get_pem(state, domain, usage, use_renew = False):
+def get_pem(state, domain, spec, use_renew = False):
     '''
-
     '''
     target = state.targets[domain]
+    params = target['records'][spec]['params']
+    usage = params['usage']
 
     # Note: candidate_certs is a dict where the keys are the certificates
     # to attempt to read, and the associated value is the index value of the
@@ -41,10 +40,6 @@ def get_pem(state, domain, usage, use_renew = False):
             candidate_certs = { target['certs']['chain.pem']['archive']: 0,
                                 target['certs']['fullchain.pem']['archive']: 1 }
 
-    # remember errors since we won't raise exceptions immediately, but
-    # try to find a usable certificate
-    errors = []
-
     for cert in candidate_certs:
         try:
             with open(str(cert), 'r') as file:
@@ -55,29 +50,25 @@ def get_pem(state, domain, usage, use_renew = False):
             return pems[ candidate_certs[cert] ]
 
         except OSError as ex:
-            errors += [ "certificate '{}' could not be read: {}".format(
-                            ex.filename, ex.strerror.lower() ) ]
+            # add the error as a warning since this _may_ not be fatal
+            if state.handler:
+                state.handler.warning( Error(2000, "certificate '{}': {}".format(
+                        ex.filename, ex.strerror ) ))
             continue
-        except IndexError as ex:
-            errors += [ "certificate '{}' malformed: expected PEM data missing".format(cert) ]
+        except IndexError:
+            # add the error as a warning since this _may_ not be fatal
+            if state.handler:
+                state.handler.warning( Error(2001, "certificate '{}': expected PEM data headers missing".format(cert)) )
             continue
 
     # if we hit this point, errors in all the candidate files have been found
-    if errors:
-        err = "no suitable PEM data found:"
-        for e in errors:
-            err += "\n  - {}".format(e)
-
-        raise exception.AlnitakError(err)
-
-    raise exception.AlnitakInternalError(
-                "no suitable PEM data found".format() )
+    raise exception.AlnitakError( Error(2010, "record '{}': no usable certificate found".format(state.tlsa_record_formatted(domain, spec)) ) )
 
 def split_pem_data(data):
     '''
     '''
     pems = []
-    buf = ""
+    buf = ''
     for l in data:
         if l == '-----BEGIN CERTIFICATE-----':
             # if buffer is not empty, then flush its contents into 'pems'
@@ -95,51 +86,48 @@ def split_pem_data(data):
 
     return pems
 
-def get_cert_data(params, pem):
+def get_cert_data(state, domain, spec, pem):
     '''
     '''
+    params = state.targets[domain]['records'][spec]['params']
     usage = params['usage']
     selector = params['selector']
     matching_type = params['matching_type']
     try:
         cert = x509.load_pem_x509_certificate(
                                     bytes(pem, 'utf-8'), default_backend())
-    except ValueError as ex: # TODO: check me
-        raise exception.AlnitakInternalError(
-                "creating hash failed: {}".format(str(ex).lower())) # TODO
-                                                # ^^^^^^^^^^^^^^^^    TODO
 
-    try:
-        if selector == '0':
-            # use the full certificate
-            if matching_type == '0':
-                return encode(cert.public_bytes(
-                                    encoding=serialization.Encoding.DER),
-                                    'hex').decode('ascii')
-            elif matching_type == '1':
-                return encode(cert.fingerprint(hashes.SHA256()),
-                              'hex').decode('ascii')
-            else:
-                return encode(cert.fingerprint(hashes.SHA512()),
-                              'hex').decode('ascii')
+    # if the PEM data is malformed a ValueError exception will be raised
+    # with message 'Unable to load certificate'. We'll give a more descriptive
+    # error message.
+    except ValueError:
+        raise exception.AlnitakError( Error(2010, "record '{}': creating certificate data failed: malformed PEM data".format(state.tlsa_record_formatted(domain, spec)) ))
+
+    if selector == '0':
+        # use the full certificate
+        if matching_type == '0':
+            return encode(cert.public_bytes(
+                                encoding=serialization.Encoding.DER),
+                                'hex').decode('ascii')
+        elif matching_type == '1':
+            return encode(cert.fingerprint(hashes.SHA256()),
+                          'hex').decode('ascii')
         else:
-            # use the public key
-            der = cert.public_key().public_bytes(
-                        encoding=serialization.Encoding.DER,
-                        format=serialization.PublicFormat.SubjectPublicKeyInfo)
-            if matching_type == '0':
-                return encode(der, 'hex').decode('ascii')
-            elif matching_type == '1':
-                digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
-                digest.update(der)
-                return encode(digest.finalize(), 'hex').decode('ascii')
-            else:
-                digest = hashes.Hash(hashes.SHA512(), backend=default_backend())
-                digest.update(der)
-                return encode(digest.finalize(), 'hex').decode('ascii')
-    except cryptography.exceptions.UnsupportedAlgorithm: # TODO: check me
-        raise exception.AlnitakInternalError("unsupported hash algorithm")
-    except TypeError: # TODO: check me
-        raise exception.AlnitakInternalError(
-                "certificate data not a byte string")
+            return encode(cert.fingerprint(hashes.SHA512()),
+                          'hex').decode('ascii')
+    else:
+        # use the public key
+        der = cert.public_key().public_bytes(
+                    encoding=serialization.Encoding.DER,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo)
+        if matching_type == '0':
+            return encode(der, 'hex').decode('ascii')
+        elif matching_type == '1':
+            digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
+            digest.update(der)
+            return encode(digest.finalize(), 'hex').decode('ascii')
+        else:
+            digest = hashes.Hash(hashes.SHA512(), backend=default_backend())
+            digest.update(der)
+            return encode(digest.finalize(), 'hex').decode('ascii')
 

@@ -16,7 +16,6 @@ from alnitak.prog import Error
 #               to login with "example.com" and NOT "subdomain.example.com":
 #               we need to amend the api domain parameter.
 
-
 def init_dane_directory(state):
     '''Initialize all the dane directories (DDs) given in the state object.
 
@@ -73,7 +72,6 @@ def init_dane_directory(state):
             if state.handler:
                 state.handler.error(ex.message)
 
-
 def create_dane_directory(state, domain):
     '''Create dane directory (DD) and its parents.
 
@@ -99,12 +97,11 @@ def create_dane_directory(state, domain):
         if not target['dane_directory'].is_dir():
             raise exception.AlnitakError( Error(1000,
                     "creating dane directory '{}' failed: {}".format(
-                        ex.filename, ex.strerror.lower() ) ))
+                        ex.filename, ex.strerror ) ))
     except OSError as ex:
         raise exception.AlnitakError( Error(1001,
                 "creating dane directory '{}' failed: {}".format(
-                    ex.filename, ex.strerror.lower() ) ))
-
+                    ex.filename, ex.strerror ) ))
 
 def change_dane_directory_permissions(state, domain):
     '''Change the permissions of the dane directory.
@@ -128,15 +125,14 @@ def change_dane_directory_permissions(state, domain):
     except OSError as ex:
         raise exception.AlnitakError( Error(1010,
                 "changing permissions of dane directory '{}' failed: {}".format(
-                    ex.filename, ex.strerror.lower() ) ))
+                    ex.filename, ex.strerror ) ))
     try:
         if not state.testing_mode:
             os.chown(str(target['dane_directory']), 0, 0)
     except OSError as ex:
         raise exception.AlnitakError( Error(1011,
                 "changing owner of dane directory '{}' failed: {}".format(
-                    ex.filename, ex.strerror.lower() ) ))
-
+                    ex.filename, ex.strerror ) ))
 
 def create_dane_domain_directory(state, domain):
     '''Create a domain directory.
@@ -174,12 +170,11 @@ def create_dane_domain_directory(state, domain):
         else:
             raise exception.AlnitakError( Error(1022,
                     "creating dane domain directory '{}' failed: {}".format(
-                        ex.filename, ex.strerror.lower() ) ))
+                        ex.filename, ex.strerror ) ))
     except OSError as ex:
         raise exception.AlnitakError( Error(1023,
                 "creating dane domain directory '{}' failed: {}".format(
-                    ex.filename, ex.strerror.lower() ) ))
-
+                    ex.filename, ex.strerror ) ))
 
 def populate_dane_domain_directory(
         state, domain, to_live = False, skip_certs = False):
@@ -212,7 +207,7 @@ def populate_dane_domain_directory(
     except OSError as ex:
         raise exception.AlnitakError( Error(1030,
                 "getting live certs in letsencrypt live domain directory '{}' failed: {}".format(
-                    ex.filename, ex.strerror.lower() ) ))
+                    ex.filename, ex.strerror ) ))
 
     # create files in the DDD named as the symlinks in the LDD
     for cert in target['live_links']:
@@ -261,12 +256,12 @@ def populate_dane_domain_directory(
                             except OSError as ex:
                                 raise exception.AlnitakError( Error(1031,
                                         "could not remove existing dane file '{}': {}".format(
-                                            ex.filename, ex.strerror.lower() )))
+                                            ex.filename, ex.strerror )))
                             continue
                     except OSError as ex:
                         raise exception.AlnitakError( Error(1032,
                                 "could not resolve the symlink '{}': {}".format(
-                                    ex.filename, ex.strerror.lower() ) ))
+                                    ex.filename, ex.strerror ) ))
                 elif not dane_file.is_dir():
                     # otherwise, as long as it's not a (symlink to a)
                     # directory, then remove it and try again...
@@ -278,7 +273,7 @@ def populate_dane_domain_directory(
                     except OSError as ex:
                         raise exception.AlnitakError( Error(1033,
                                 "could not remove existing dane file '{}': {}".format(
-                                    ex.filename, ex.strerror.lower() ) ))
+                                    ex.filename, ex.strerror ) ))
                     continue
                 else:
                     # it it's a directory, we don't want to potentially
@@ -290,15 +285,13 @@ def populate_dane_domain_directory(
             except OSError as ex:
                 raise exception.AlnitakError( Error(1035,
                         "creating symlink '{}' failed: {}".format(
-                            ex.filename, ex.strerror.lower() ) ))
+                            ex.filename, ex.strerror ) ))
 
             break
         else:
             raise exception.AlnitakError( Error(1036,
                     "dane cert '{}' is incompatible; manual removal is required".format(
                         dane_file) ))
-
-
 
 # TODO: docs
 #
@@ -333,12 +326,16 @@ def cleanup_prev_state(state, prev_state):
 
         if domain in state.targets:
             # No matter what progress is made, if a record was published,
-            # let's mark it for deletion. Note: if this record matches the
-            # new record when the cert data is set, that code will remove this
-            # delete record when the time comes.
+            # let's mark it for deletion (unless is_up is True, which means
+            # the record has been processed; if delete was unsuccessful, then
+            # it will have been moved to a delete record).
+            # Note: if this record matches the new record when the cert data
+            # is set, that code will remove this delete record when the time
+            # comes.
             for spec in prev_state.targets[domain]['records']:
                 prev_record = prev_state.targets[domain]['records'][spec]
-                if prev_record['new']['published']:
+                if (prev_record['new']['published']
+                        and not prev_record['new']['is_up']):
                     state.create_delete(domain, spec, prev_state=prev_state)
 
                 for delete in prev_record['delete']:
@@ -356,10 +353,12 @@ def cleanup_prev_state(state, prev_state):
                         record = target['records'][spec]
                         if record['new']['published']:
                             message += '\n  - {}'.format(
-                                    state.tlsa_record_formatted(domain, spec))
-
+                                state.tlsa_record_formatted(
+                                                        domain, spec, True) )
+                        else:
                             message += '\n  - {}'.format(
-                                state.tlsa_record_formatted(domain,spec,False))
+                                state.tlsa_record_formatted(
+                                                        domain, spec, False) )
 
                     if message:
                         state.handler.warning("domain '{}' is orphaned: it is no longer present in the config settings; the following records were published:{}".format(domain, message))
@@ -369,7 +368,6 @@ def cleanup_prev_state(state, prev_state):
                     state.handler.internal_error(
                             "target progress '{}' is invalid".format(
                                 target['progress'] ))
-
 
 # TODO: docs
 def set_renewed(state):
@@ -439,8 +437,7 @@ def set_renewed(state):
             except exception.AlnitakResolveError as ex:
                 raise exception.AlnitakError( Error(1043,
                         "could not resolve '{}': {}".format(
-                            ex.filename, ex.strerror.lower() ) ))
-
+                            ex.filename, ex.strerror ) ))
 
 # TODO: docs
 def process_deployed(state):
@@ -516,11 +513,14 @@ def process_deployed(state):
                                 target['progress'] ))
 
         except exception.AlnitakError as ex:
-            # FIXME: should I taint?
-            #target['tainted'] = True
+            # Note: only the api calls should not taint, those called in
+            # publish_records and delete_records. However, these functions
+            # do not throw since the exceptions are caught and handled
+            # internally in both these functions. Any exceptions that hit this
+            # catch should taint.
+            target['tainted'] = True
             if state.handler:
                 state.handler.error(ex.message)
-
 
 # TODO: docs
 def set_cert_data(state, domain, update=False):
@@ -545,9 +545,8 @@ def set_prev_cert_data(state, domain, update=False):
     #   2. if cert_data matches new cert_data, we blank prev; otherwise, we
     #       write new cert data.
     for spec in state.targets[domain]['records']:
-        params = state.targets[domain]['records'][spec]['params']
-        pem = certops.get_pem(state, domain, params['usage'])
-        cert_data = certops.get_cert_data(params, pem)
+        pem = certops.get_pem(state, domain, spec) # params['usage'])
+        cert_data = certops.get_cert_data(state, domain, spec, pem)
 
         # check if cert_data is in 'new':
         #if state.targets[domain]['records'][spec]['new']:
@@ -581,9 +580,8 @@ def set_new_cert_data(state, domain, update=False):
     #   2. if cert_data matches new cert_data, we blank prev; otherwise, we
     #       write new cert data.
     for spec in state.targets[domain]['records']:
-        params = state.targets[domain]['records'][spec]['params']
-        pem = certops.get_pem(state, domain, params['usage'], use_renew = True)
-        cert_data = certops.get_cert_data(params, pem)
+        pem = certops.get_pem(state, domain, spec, use_renew = True)
+        cert_data = certops.get_cert_data(state, domain, spec, pem)
 
         # check if data exists in prev and if so remove it
         if (state.targets[domain]['records'][spec]['prev'] and
@@ -623,7 +621,6 @@ def set_new_cert_data(state, domain, update=False):
                 'update': None,
                 'time': int( '{:%s}'.format(datetime.utcnow()) )
                 }
-
 
 # TODO: docs
 def publish_records(state, domain):
@@ -691,7 +688,6 @@ def delete_records(state, domain):
             if state.handler:
                 state.handler.error(ex.message)
 
-
 # TODO: docs
 def move_symlinks(state, domain):
     '''
@@ -709,7 +705,6 @@ def move_symlinks(state, domain):
         return
     target['progress'] = 'deployed'
 
-
 # TODO: docs
 def process_deletes(state):
     '''
@@ -725,7 +720,12 @@ def process_deletes(state):
         for spec in target['records']:
             record = target['records'][spec]
 
-            for data in record['delete']:
+            # api_read_delete will delete keys in the dict, which will cause
+            # an exception, so let's collect the keys and loop over that
+            # instead.
+            del_keys = [ k for k in record['delete'] ]
+
+            for data in del_keys:
                 try:
                     api_read_delete(state, domain, spec, data)
                 except exception.AlnitakError as ex:
@@ -819,7 +819,7 @@ def set_certs(state, domain, cert, dane_file):
     except exception.AlnitakResolveError as ex:
         raise exception.AlnitakError( Error(1050,
                 "live cert '{}' could not be resolved: {}".format(
-                    ex.filename, ex.strerror.lower() ) ))
+                    ex.filename, ex.strerror ) ))
 
     try:
         if ( archive_resolved.parent !=
@@ -830,7 +830,7 @@ def set_certs(state, domain, cert, dane_file):
     except exception.AlnitakResolveError as ex:
         raise exception.AlnitakError( Error(1052,
                 "archive domain directory '{}' could not be resolved: {}".format(
-                    ex.filename, ex.strerror.lower() ) ))
+                    ex.filename, ex.strerror ) ))
 
     # set it as follows so that we respect the path structure given
     # and not resolve any symlinks in the archive domain directory, if
@@ -870,5 +870,5 @@ def resolve(path):
     except FileNotFoundError as ex:
         raise exception.AlnitakResolveError(ex.filename, ex.strerror)
     except RuntimeError as ex:
-        raise exception.AlnitakResolveError(path, str(ex))
+        raise exception.AlnitakResolveError(str(path), str(ex))
 

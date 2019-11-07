@@ -7,7 +7,6 @@ from alnitak import prog as Prog
 
 # FIXME: error messages and using Error class
 
-
 def get_errors(response):
     """Extract error messages from the JSON response.
 
@@ -184,7 +183,6 @@ def get_zone(state, domain):
     #prog.log.info2("  + zone ID retrieved: '...({})'".format(len(api.zone)))
 
 
-
 def api_read_delete(state, domain, spec, cleanup = None):
     """Delete a DANE TLSA record.
 
@@ -320,7 +318,6 @@ def cloudflare_fallback_delete(state, domain, record_id):
 
     if not response['success']:
         raise exception.AlnitakError("Cloudflare4 JSON response failure")
-
 
 
 def api_publish(state, domain, spec):
@@ -476,7 +473,6 @@ def cloudflare_fallback_publish(state, domain, spec):
     # if we hit this point, then there were no errors and the record was
     # published:
     record['new']['published'] = True
-
 
 
 def cloudflare_native_read(state, domain, spec):
@@ -705,7 +701,7 @@ def read_cloudflare_api_file(prog, file, state):
     except OSError as ex:
         prog.log.error(
                 "reading cloudflare API file '{}' failed: {}".format(
-                                            ex.filename, ex.strerror.lower()))
+                                            ex.filename, ex.strerror))
         return None
 
     allowed_params = {'dns_cloudflare_email': 'email',

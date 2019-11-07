@@ -4,6 +4,9 @@ import re
 from pathlib import Path
 
 
+def is_root():
+    return os.getuid() == 0
+
 def mkdir(path, parents=False):
     try:
         Path(path).mkdir(parents=parents)
@@ -28,7 +31,6 @@ def symlink(path, filename, domain, num, recreate):
     (path / '{}.pem'.format(filename)).symlink_to(
                 '../../archive/{}/{}{}.pem'.format(domain, filename, num))
 
-
 class Handler:
     def __init__(self):
         self.errors = []
@@ -39,7 +41,6 @@ class Handler:
 
     def error(self, obj):
         self.errors += [ obj ]
-
 
 def create_testing_base_dir(
         base='.alnitak_tests', le_dir='etc/le',
@@ -299,8 +300,6 @@ privkey {}
 
     return le_path
 
-
-
 def exists_and_is_dir(path, symlink=False, must=True):
     '''
                                              must
@@ -342,8 +341,6 @@ def exists_and_is_file(path, symlink=False, must=True):
             assert p.is_symlink()
         else:
             assert not p.is_symlink()
-
-
 
 def check_state_domain(state, domain):
     if type(domain) is list:
@@ -408,7 +405,8 @@ def check_record(state, domain, spec, port, protocol, rdomain=None,
     if data and prev_data:
         assert data != prev_data
 
-def create_exec(base='.alnitak_tests', bin_dir='bin', bin_name='api'):
+def create_exec(base='.alnitak_tests', bin_dir='bin', bin_name='api',
+                call_data_mode=0o666):
     base_path = Path(base)
     bin_path = base_path / bin_dir
     api_prog = bin_path / bin_name
@@ -435,24 +433,27 @@ for i in $@ ; do
     esac
 done
 
-echo "$(whoami) x:$exit_code $(env | xargs) " >> $(dirname "$0")/call.data
+echo "user=$(whoami) x:$exit_code $(env | xargs) " >> $(dirname "$0")/call.data
 if test -z "$exit_code" ; then
     exit 0
 fi
 exit "$exit_code"
 ''')
 
-    os.chmod(str(api_prog), 0o744)
+    os.chmod(str(api_prog), 0o755)
 
-    return reset_call_data(base=base, bin_dir=bin_dir)
+    return reset_call_data(base=base, bin_dir=bin_dir,
+                            call_data_mode=call_data_mode)
 
-def reset_call_data(base='.alnitak_tests', bin_dir='bin'):
+def reset_call_data(base='.alnitak_tests', bin_dir='bin',
+                    call_data_mode=0o666):
     call_data = Path(base) / bin_dir / 'call.data'
     with open(str(call_data), 'w') as f:
         f.write('')
 
-    return call_data
+    os.chmod(str(call_data), call_data_mode)
 
+    return call_data
 
 def read_call_data(base='.alnitak_tests', bin_dir='bin'):
     call_data = Path(base) / bin_dir / 'call.data'
@@ -461,7 +462,6 @@ def read_call_data(base='.alnitak_tests', bin_dir='bin'):
             return f.read().splitlines()
     except FileNotFoundError:
         return []
-
 
 def is_in_call_data(call_data, data):
     count = 0
@@ -645,7 +645,6 @@ def get_data(domain, num, spec):
             if spec == '312':
                 return '3596ab9e1505a1c7a8725dffe6c87d672a4004ce0db3152a88420fa0ad82054d85e35f151b03f7382f21471571434bdc54a2a9db8ab13b53ca10b40c6324fc04'
     return 'nodata'
-
 
 def debug_cut_paths(p, cut):
     if not p:
